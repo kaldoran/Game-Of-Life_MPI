@@ -1,0 +1,121 @@
+\documentclass[8pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{graphicx}
+\usepackage{fancyhdr}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage[french]{babel}
+\usepackage[left=2cm,right=2cm,top=2cm,bottom=2cm]{geometry}
+\pagestyle{fancy}
+
+\renewcommand{\headrulewidth}{1pt}
+\fancyhead[C]{} 
+\fancyhead[L]{INF7235 - Devoir \#1 - Code Source}
+\fancyhead[R]{Reynaud Nicolas}
+
+\renewcommand{\footrulewidth}{1pt}
+\fancyfoot[C]{\LaTeX} 
+\fancyfoot[L]{\small\hspace{15pt}\emph{Imprimé le : \today}}
+\fancyfoot[R]{Page \thepage}
+%µ \lstset{language=C, basicstyle=\scriptsize}
+\lstset{
+  belowcaptionskip=1\baselineskip,
+  breaklines=true,
+  backgroundcolor=\color{lightgray!20},
+  frame=L,
+  xleftmargin=\parindent,
+  language=C,
+  showstringspaces=false,
+  basicstyle=\footnotesize\ttfamily,
+  keywordstyle=\bfseries\color{green!40!black},
+  commentstyle=\itshape\color{purple!40!black},
+  identifierstyle=\color{black},
+  keywordstyle=\color{green!40!black},
+  morekeywords={Game, Option, size_t, TaskPile, ThreadInfo, bool, Task},
+  numbers=left,
+  numberstyle=\tiny\color{black},
+  stringstyle=\color{purple},
+  morecomment=[s][\color{green!40!black}]{\#}{\ },
+  showspaces=false,
+  showstringspaces=false,
+  showtabs=false,  
+}
+\newcommand\digitstyle{\color{red}}
+\makeatletter
+\newcommand{\ProcessDigit}[1]
+{%
+  \ifnum\lst@mode=\lst@Pmode\relax%
+   {\digitstyle #1}%
+  \else
+    #1%
+  \fi
+}
+\makeatother
+\lstset{literate=
+    {0}{{{\ProcessDigit{0}}}}1
+    {1}{{{\ProcessDigit{1}}}}1
+    {2}{{{\ProcessDigit{2}}}}1
+    {3}{{{\ProcessDigit{3}}}}1
+    {4}{{{\ProcessDigit{4}}}}1
+    {5}{{{\ProcessDigit{5}}}}1
+    {6}{{{\ProcessDigit{6}}}}1
+    {7}{{{\ProcessDigit{7}}}}1
+    {8}{{{\ProcessDigit{8}}}}1
+    {9}{{{\ProcessDigit{9}}}}1
+    {<=}{{\(\leq\)}}1,
+    morestring=[b]",
+    morestring=[b]',
+    morecomment=[l]//,
+}
+
+\begin{document}
+
+\underline{File} : error
+\lstinputlisting[firstline=20]{./INC/error.h}
+
+\underline{File} : main
+\lstinputlisting[firstline=20]{./SRC/main.c}
+
+\underline{File} : game\_struct
+\lstinputlisting[firstline=20]{./INC/game_struct.h}
+\underline{File} : game
+\lstinputlisting[firstline=20]{./INC/game.h}
+\vspace{-0.35cm}\noindent\rule{8cm}{0.4pt}
+\lstinputlisting[firstline=20]{./SRC/game.c}
+
+\underline{File} : memory
+\lstinputlisting[firstline=20]{./INC/memory.h}
+\vspace{-0.35cm}\noindent\rule{8cm}{0.4pt}
+\lstinputlisting[firstline=20]{./SRC/memory.c}
+
+\underline{File} : ncurses
+\lstinputlisting[firstline=20]{./INC/ncurses.h}
+\vspace{-0.35cm}\noindent\rule{8cm}{0.4pt}
+\lstinputlisting[firstline=20]{./SRC/ncurses.c}
+
+\underline{File} : option\_struct
+\lstinputlisting[firstline=20]{./INC/option_struct.h}
+
+\underline{File} : option
+\lstinputlisting[firstline=20]{./INC/option.h}
+\vspace{-0.35cm}\noindent\rule{8cm}{0.4pt}
+\lstinputlisting[firstline=20]{./SRC/option.c}
+
+\underline{File} : task\_pile\_struct
+\lstinputlisting[firstline=20]{./INC/task_pile_struct.h}
+\underline{File} : task
+\lstinputlisting[firstline=20]{./INC/task.h}
+\vspace{-0.35cm}\noindent\rule{8cm}{0.4pt}
+\lstinputlisting[firstline=20]{./SRC/task.c}
+
+\underline{File} : thread
+\lstinputlisting[firstline=20]{./INC/thread_struct.h}
+\lstinputlisting[firstline=20]{./INC/thread.h}
+\vspace{-0.35cm}\noindent\rule{8cm}{0.4pt}
+\lstinputlisting[firstline=20]{./SRC/thread.c}
+
+
+\end{document}
