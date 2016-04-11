@@ -29,7 +29,7 @@
 #include "option_struct.h"
 
 /* List of possible option */
-#define OPT_LIST "hf:t:np:r:c:gs"
+#define OPT_LIST "hf:t:r:c:sm"
 
 /** Use the definition defined by David Titarenco
  *  On StackOverFlow http://stackoverflow.com/questions/3437404/min-and-max-in-c 

@@ -1,5 +1,5 @@
 # Release/Debug
-DEBUG=no
+DEBUG=yes
 
 # Directories
 SRC_DIR = SRC
@@ -7,7 +7,7 @@ INC_DIR = INC
 OBJ_DIR = OBJ
 BIN_DIR = BIN
 
-CC = gcc
+CC = mpicc
 CFLAGS = -W -Wall -Wextra -O2 -lncursesw -lpthread -ansi 
 
 # For glibc under glibc2.20 [_BSD_SOURCE] and higher [_DEFAULT_SOURCE]

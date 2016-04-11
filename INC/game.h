@@ -29,19 +29,21 @@
 #include "game_struct.h"
 #include "option_struct.h"
 
-#include "task_pile_struct.h"
-
 /**
  * First need to define all the constante
  * thoses one are usefull for generate a random board if needed
  */
-#define MIN_COLS_SIZE 5 /* Minimum number of cols */
+#define MIN_COLS_SIZE 3 /* Minimum number of cols */
 #define MIN_ROWS_SIZE 3 /* Minimum number of rows */
 
-#define POURCENT_BEEN_ALIVE 15 /* Pourcentage of cell to keep alive during generation */
+#define POURCENT_BEEN_ALIVE 15/* Pourcentage of cell to keep alive during generation */
 
-#define DEAD_CELL 0
-#define ALIVE_CELL 1
+#define DEAD_CELL 46
+#define ALIVE_CELL 35
+
+/* Define constant to identify which method we use for dividing the grid */
+#define DIVIDE_ROWS 0
+#define DIVIDE_MATRICE 1
 
 /**
  * Given X, and Y this function output the position into the board. 
@@ -60,9 +62,17 @@
  * number of generation left.
  * 
  * %param g : The game which contains the board to print
- * %param o : Option which include the use_ncurses option
+ * %param tick_left : total of tick game left to do
  */
-void gamePrintInfo ( Game* g, Option o);
+void gamePrintInfo ( Game* g, int tick_left);
+
+/**
+ * Function that create a new game
+ * %param rows : Total number of rows onto the new board
+ * %param cols : Total number of Column onto the new board
+ * %return     : Allocated game structure which contains all the information 
+ */
+Game* newGame(unsigned int rows, unsigned int cols);
 
 /**
  * Function that free the memory associate with a game
@@ -77,21 +87,7 @@ void freeGame(Game* g);
  */
 Game* generateRandomBoard(Option o);
 
-/**
- * Function that make the game tick, i.e function that iterate through the game board
- * and complet the other board.
- * %param g : game with contains the board on which we need to iterate
- * %param t : task that need to be done on this board
- */
-void gameTick(Game *g, Task *t);
-
-/**
- * Private function that is used in the main program
- * This function swap the 2 board of the game
- * %param g : Game which contains the 2 board to swap
- */
-void swapGrid(Game* g);
-
+void processGameTick(Game *g);
 /**
  * Load in memory a game / board contains into a file
  * %param name : path to the file to load

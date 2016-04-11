@@ -25,15 +25,14 @@
 #include "option.h"
 
 void usage(char* name) {
-    printf("%s [-h]\n\t\t [-f <filePath>] [-t <maxTick>] [-c <number cols] [-r <number rows] [-g] [-n] [-s]\n\n", name);
+    printf("%s [-h]\n\t\t [-f <filePath>] [-t <maxTick>] [-c <number cols] [-r <number rows] [-m] [-s]\n\n", name);
     printf("\t\t -h : print this help\n");
     printf("\t\t -f filePath : path to the file to use for the grid\n");
-    printf("\t\t -t maxTick : max time to make the game tick, set it to negatif for infinite tick\n");
+    printf("\t\t -t maxTick : max time to make the game tick, set it to negative for infinite tick\n");
     printf("\t\t -c : total numner of column\n");
     printf("\t\t -r : total number of rows\n");
-    printf("\t\t -n : use ncurses for the display\n");
-    printf("\t\t -g : if -g set then we use fine grained method\n");
-    printf("\t\t -s : if -s is use the final grib will be saved\n");
+    printf("\t\t -m : If here we use division by matrice if not we use division by rows\n");
+    printf("\t\t -s : if -s is use the final grid will be saved\n");
 
     exit(EXIT_SUCCESS);
 }
@@ -45,15 +44,13 @@ void usage(char* name) {
 Option __setDefaultValue() {
     Option o;
     
-    o.use_fine_grained = false;
-    o.use_ncurses = false;
     o.file_path = "\0";
     o.max_tick = 100;
-    o.nb_thread = 0;
+    o.method = DIVIDE_ROWS;
     o.save_file = false;
 
-    o.rows = rand() % ( MAX_ROWS_SIZE - MIN_ROWS_SIZE) + MIN_ROWS_SIZE;
-    o.cols = rand() % ( MAX_COLS_SIZE - MIN_COLS_SIZE) + MIN_COLS_SIZE;    
+    o.rows = MIN_ROWS_SIZE;
+    o.cols = MIN_COLS_SIZE;    
     
     return o;
 }
@@ -75,26 +72,17 @@ Option getOption(int argc, char **argv) {
             case 't':
                 o.max_tick = atoi(optarg);
                 break;
-            case 'n': 
-                o.use_ncurses = true;
-                #ifndef PRINT
-                    printf("You need to compile with make display to use '-n' parameter\n");
-                #endif
-                break;
-            case 'p':
-                o.nb_thread = MAX(atoi(optarg), 0);
-                break;
             case 'r':
                 o.rows = MAX(atoi(optarg), MIN_ROWS_SIZE);
                 break;
             case 'c':
                 o.cols = MAX(atoi(optarg), MIN_COLS_SIZE);
                 break;
-            case 'g':
-                o.use_fine_grained = true;
-                break;
             case 's': 
                 o.save_file = true;
+                break;
+            case 'm':
+                o.method = DIVIDE_MATRICE;
                 break;
             default: 
                 exit(EXIT_FAILURE);

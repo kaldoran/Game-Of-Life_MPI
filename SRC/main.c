@@ -26,60 +26,83 @@
 
 #include "error.h"
 #include "game.h"
-#include "task.h"
-#include "ncurses.h"
 #include "option.h"
-#include "thread.h"
+
+char *__posBufferRecv(int my_id, char* s, int offset) {
+    if ( my_id != 0 ) 
+        return &(*(s + (offset * sizeof(s[0]) )));
+    return s;
+}
 
 int main(int argc, char* argv[]) {
 
-    int totalThread, myId;
-    
     Option o;
-    double time;
-    Game* g = NULL; 
+    Game *g, *s = NULL;
+    double time = 0.0;
+    int total_proc, my_id, slice_size, size_tick[3];
 
     MPI_Init(&argc, &argv);
-    MPI_Comm_size(MPI_COMM_WORLD,&totalThread);
-    MPI_Comm_rank(MPI_COMM_WORLD,&myId);
-  
-    /* Then, here argc and argv are set to the right value */
-    o = getOption(argc, argv);  /* Get all option     */
+    MPI_Comm_size(MPI_COMM_WORLD,&total_proc);
+    MPI_Comm_rank(MPI_COMM_WORLD,&my_id);
+ 
+    if ( my_id == 0 ) {
+        g = NULL;
+        o = getOption(argc, argv);  /* Get all option     */
 
-    if ( *o.file_path != '\0' ) /* If path file is not empty */
-        if ( (g = loadBoard(o.file_path)) == NULL ) /* then use the given file [load id] */
-            fprintf(stderr, "Can't load file %s\n", o.file_path);
+        if ( *o.file_path != '\0' ) /* If path file is not empty */
+            if ( (g = loadBoard(o.file_path)) == NULL ) /* then use the given file [load id] */
+                fprintf(stderr, "Can't load file %s\n", o.file_path);
 
-    if ( g == NULL ) /* If load of file fail Or no grid given */
-        g = generateRandomBoard(o); /* then create one */
+        if ( g == NULL ) /* If load of file fail Or no grid given */
+            g = generateRandomBoard(o); /* then create one */
 
-    if ( o.use_ncurses ) /* If we use ncurses */
-        initNCurses();   /* Then we init the display */
+        time = MPI_Wtime();
+        size_tick[0] = g->rows;
+        size_tick[1] = g->cols;
+        size_tick[2] = o.max_tick;
 
-    time = MPI_Wtime();
-    while(o.max_tick != 0) {         /* Inifinit loop if total tick not given */
-
-        gamePrintInfo(g, o);         
-        
-        swapGrid(g);
-        --o.max_tick;
-        
-        #ifdef PRINT                 /* If we print we add some delay without it we can't see the grid */
-            usleep(400000);
-        #endif
     }
-    
-    time =  MPI_Wtime() - time;
-    printf("Time : %f\n", time);
-    
-    if ( o.use_ncurses) /* If we use ncurses ( and then init it ) */
-        endNCurses();   /* we need to clear display info */
 
-    if ( o.save_file )     
-        saveBoard(g);
+    MPI_Bcast(size_tick, 3, MPI_INT, 0, MPI_COMM_WORLD);
+
+    if ( o.method == DIVIDE_ROWS ) {
+
+        /**  NEED THE LOOPADY LOOP **/
+
+        /* Lets allocated the memory for the shared buffer at the same moment */
+        slice_size = size_tick[1] / total_proc;
+        s = newGame(size_tick[0], 
+                   slice_size + (( my_id == 0 || my_id == total_proc - 1) ? 1 : 2) );
+        
+
+        MPI_Scatter( g->board, size_tick[0] * slice_size, MPI_CHAR,
+                     __posBufferRecv(my_id, s->board, size_tick[0]),
+                     size_tick[0] * slice_size, MPI_CHAR, 
+                     0, MPI_COMM_WORLD);
+
+        /* Fill with the right value*/
+        processGameTick(s);
+       
+        MPI_Gather( __posBufferRecv(my_id, s->board, size_tick[0]),
+                    size_tick[0] * slice_size, MPI_CHAR,
+                    g->board, size_tick[0] * slice_size, MPI_CHAR,
+                    0, MPI_COMM_WORLD);
+
+        if ( my_id == 0 )
+            gamePrintInfo(g, 0);
+    }
+
+    if ( my_id == 0 ) {
+        time =  MPI_Wtime() - time;
+        printf("Time : %f\n", time);
+
+        if ( o.save_file )     
+            saveBoard(g);
+
+        freeGame(g);           /* Free space we are not in Java */
+    }
 
     MPI_Finalize();
-    freeGame(g);           /* Free space we are not in Java */
     
     exit(EXIT_SUCCESS);
 }

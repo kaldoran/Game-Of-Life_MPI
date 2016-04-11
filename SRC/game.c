@@ -20,6 +20,9 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <curses.h>
+#include <string.h>
+#include <stdbool.h>
+#include <mpi.h>
 
 #include "error.h"
 #include "game.h"
@@ -34,21 +37,20 @@
  * %return  : Position of the cell associate with the X and Y coordinate
  */
 int __position(unsigned int x, unsigned int y, Game* g) {
-    return g->cols * y + x;
+    return g->rows * x + y;
 }
 
 /**
  * Private function that print a simple line
  * %param g : Game structure which contains the information relative to the game
- * %param pf : Pointer to a print function
  */
-void __printLine(Game* g, int (*pf)(const char *, ...)) {
+void __printLine(Game* g) {
     unsigned int i = 0;
 
-    (*pf)("+");
+    printf( "+");
     for ( i = 0; i < g->cols + 2; i++ ) /* the 2 '+'  */
-        (*pf)("-");
-    (*pf)("+\n");
+        printf( "-");
+    printf( "+\n");
 
 }
 
@@ -57,53 +59,40 @@ void __printLine(Game* g, int (*pf)(const char *, ...)) {
  * %param g : Game struct which contains the board to print
  * %param pf : Pointer to a printing function
  */
-void __gamePrint (Game* g, int (*pf)(const char *, ...)) {
+void __gamePrint (Game* g) {
     unsigned int x, y;
 
-    if ( *pf == printw ) /* If we use ncurses we need to replace cursor */
-        move(0, 0);
-    
-    (*pf)("Board size : \n");
-    (*pf)("  %d Columns\n", g->cols);
-    (*pf)("  %d rows\n", g->rows);
+    printf( "Board size : \n");
+    printf( "  %d Columns\n", g->cols);
+    printf( "  %d rows\n", g->rows);
+    __printLine(g);
 
-    __printLine(g, pf);
-
-    for ( y = 0; y < g->rows; y++) {
-        (*pf)("| ");
-        for ( x = 0; x < g->cols; x++) {
-            (*pf)("%c", ((g->current_board[POS(x, y, g)] == DEAD_CELL) ? '.' : '#'));    
+    for ( x = 0; x < g->cols; x++) {
+        printf( "| ");
+        for ( y = 0; y < g->rows; y++) {
+            printf( "%c", ((g->board[POS(x, y, g)] == DEAD_CELL) ? '.' : '#'));    
         }
         
-        (*pf)(" |\n");
+        printf( " |\n");
     }
     
-    __printLine(g, pf);
+    __printLine(g);
     
-    if ( *pf == printw ) /* If we use ncurses we need to refresh the display */
-        refresh();
-
     DEBUG_MSG("Print board finish\n");
 }
 
-void swapGrid(Game* g) {
-    char *tmp = g->current_board;
-    g->current_board = g->next_board;
-    g->next_board = tmp;
-}
+void gamePrintInfo(Game* g, int tick_left) {
+    
+    DEBUG_MSG("Board : %s\n", g->board);
 
-void gamePrintInfo(Game* g, Option o) {
     #ifndef PRINT
          return;
     #endif
 
-    int (*printFunc)(const char*, ...);    
-    printFunc = ( o.use_ncurses ) ? &printw : &printf; 
-
-    if ( o.max_tick >= 0 )
-        printFunc("%d Generation left.\n", o.max_tick);
+    if ( tick_left >= 0 )
+        printf("%d Generation left.\n", tick_left);
     
-    __gamePrint(g, printFunc);
+    __gamePrint(g);
 }
 
 /** 
@@ -114,24 +103,17 @@ void gamePrintInfo(Game* g, Option o) {
  */
 char* __newBoard(unsigned int rows, unsigned int cols) {
     char* board = NEW_ALLOC_K(rows * cols, char);
+    memset(board, DEAD_CELL, rows * cols);
     return board;
 }
 
-/**
- * Private function that create a new game
- * %param rows : Total number of rows onto the new board
- * %param cols : Total number of Column onto the new board
- * %return     : Allocated game structure which contains all the information 
- */
-Game* __newGame(unsigned int rows, unsigned int cols) {
+Game* newGame(unsigned int rows, unsigned int cols) {
     Game* g = NEW_ALLOC(Game);
     
     g->rows = rows;
     g->cols = cols;
     
-    g->current_board = __newBoard(rows, cols);
-    g->next_board = __newBoard(rows, cols);
-
+    g->board = __newBoard(rows, cols);
     return g;
 }
 
@@ -139,8 +121,7 @@ void freeGame(Game* g)  {
     if ( g == NULL ) 
         return;
 
-    free(g->current_board);
-    free(g->next_board);
+    free(g->board);
     free(g);
 }
 
@@ -149,12 +130,12 @@ Game* generateRandomBoard(Option o) {
     unsigned int rows = 0, cols = 0;
     Game* g;
         
-    g = __newGame(o.rows, o.cols);
+    g = newGame(o.rows, o.cols);
     
     DEBUG_MSG("Ligne : %d, Cols : %d\n", o.rows, o.cols);
-    for (rows = 0; rows < g->rows; rows++)
-        for(cols = 0; cols < g->cols; cols++)
-            g->current_board[POS(cols, rows, g)] = (
+    for(cols = 0; cols < g->cols; cols++)
+        for (rows = 0; rows < g->rows; rows++)
+            g->board[POS(cols, rows, g)] = (
                 ( rand() % 100 >= POURCENT_BEEN_ALIVE ) ? 
                     DEAD_CELL: 
                     ALIVE_CELL
@@ -172,22 +153,26 @@ Game* generateRandomBoard(Option o) {
  */
 int __neighbourCell(unsigned int x, unsigned int y, Game *g) {
     unsigned int total = 0;
-    char *b = g->current_board;
+    char *b = g->board;
+    bool isTop, isBot;
 
-    if ( x % g->cols != g->cols - 1) {
-        total += b[POS(x + 1, y,     g)]; /* Right */
-        if ( y < g->rows - 1 ) total += b[POS(x + 1, y + 1, g)]; /* Right - Down */
-        if ( y > 0 )           total += b[POS(x + 1, y - 1, g)]; /* Up - Right */
+    isTop = (y == 0);
+    isBot = (y == g->rows - 1);
+
+    if ( y % g->rows != g->rows - 1) {
+        total += b[POS(x, y + 1, g)]; /* Right */
+        if ( !isBot ) total += b[POS(x + 1, y + 1, g)]; /* Right - Down */
+        if ( !isTop ) total += b[POS(x - 1, y + 1, g)]; /* Up - Right */
     }
 
-    if ( x % g->cols != 0 ) { 
-        total += b[POS(x - 1, y    , g)]; /* Left */
-        if ( y < g->rows - 1 ) total += b[POS(x - 1, y + 1, g)]; /* Left - Down */
-        if ( y > 0 )           total += b[POS(x - 1, y - 1, g)]; /* Up - Left */
+    if ( y % g->rows != 0 ) { 
+        total += b[POS(x, y - 1, g)]; /* Left */
+        if ( !isBot ) total += b[POS(x - 1, y - 1, g)]; /* Left - Down */
+        if ( !isTop ) total += b[POS(x + 1, y - 1, g)]; /* Up - Left */
     }
 
-    if ( y < g->rows - 1 ) total += b[POS(x    , y + 1, g)]; /* Down */
-    if ( y > 0 )           total += b[POS(x    , y - 1, g)]; /* Up  */
+    if ( !isBot ) total += b[POS(x + 1, y, g)]; /* Down */
+    if ( !isTop ) total += b[POS(x - 1, y, g)]; /* Up  */
 
     return total;
 }
@@ -201,21 +186,29 @@ int __neighbourCell(unsigned int x, unsigned int y, Game *g) {
  */
 char __process(unsigned int x, unsigned int y, Game* g) {
     unsigned int neightbour = __neighbourCell(x, y, g);    
-
+   
     if ( neightbour < 2 || neightbour > 3 ) return DEAD_CELL;
     else if ( neightbour == 3 )             return ALIVE_CELL;
-    else                                    return g->current_board[POS(x, y, g)];
+    else                                    return g->board[POS(x, y, g)];
 }
 
-void gameTick(Game *g, Task* t) {
-
+void processGameTick(Game *g) {
+    int my_id, total_proc;
     unsigned int x, y;
-    
-    for (y = 0; y < g->rows; y++)
-        for(x = t->min; x <= t->max; x++)
-            g->next_board[POS(x, y, g)] = __process(x, y, g);
+    char* next;
 
-    DEBUG_MSG("Game tick finish");
+    MPI_Comm_rank(MPI_COMM_WORLD,&my_id);
+    MPI_Comm_size(MPI_COMM_WORLD,&total_proc);
+
+    next = __newBoard(g->rows, g->cols);
+
+    for ( x = (my_id != 0); x < g->cols - (my_id != total_proc - 1); x++ )
+        for ( y = 0; y < g->rows; y++ ) 
+            next[POS(x, y, g)] = __process(x, y, g);
+  
+    free(g->board);
+    g->board = NULL;
+    g->board = next;
 }
 
 Game* loadBoard(char* name) { 
@@ -227,7 +220,7 @@ Game* loadBoard(char* name) {
     if ( (fp = fopen(name, "r")) == NULL ) return NULL;
     if ( fscanf(fp, "Rows : %d\nCols : %d\n", &rows, &cols) != 2) { fclose(fp); return NULL; }
 
-    g = __newGame(rows, cols);
+    g = newGame(rows, cols);
 
     DEBUG_MSG("Rows : %d, Cols : %d\n", rows, cols);
     rows = 0; cols = 0; /* Reinit variable */
@@ -236,10 +229,10 @@ Game* loadBoard(char* name) {
         if ( reader == '.' ) reader = DEAD_CELL;
         if ( reader == '#' ) reader = ALIVE_CELL;
         
-        if ( reader == '\n') ++rows;
-        else g->current_board[POS(cols, rows, g)] = reader;
+        if ( reader == '\n') ++cols;
+        else g->board[POS(cols, rows, g)] = reader;
         
-        if ( ++cols > g->cols ) cols = 0; /* We are going to go over cols due to \n */
+        if ( ++rows > g->cols ) rows = 0; /* We are going to go over cols due to \n */
     }
 
     fclose(fp);
@@ -257,7 +250,7 @@ bool saveBoard(Game *g) {
     fprintf(fp, "Rows : %d\nCols : %d\n", g->rows, g->cols);
     for ( i = 0; i < g->cols * g->rows; i++ ) {
 
-        fprintf(fp, "%c", ((g->current_board[i]) ? '#' : '.') );
+        fprintf(fp, "%c", ((g->board[i]) ? '#' : '.') );
         if ( i % g->cols == g->cols - 1 ) fprintf(fp, "\n"); 
     }
 
