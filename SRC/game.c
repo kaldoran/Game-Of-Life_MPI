@@ -222,7 +222,7 @@ Game* loadBoard(char* name) {
 
     g = newGame(rows, cols);
 
-    DEBUG_MSG("Rows : %d, Cols : %d\n", g->rows, g->cols);
+    DEBUG_MSG("Rows : %d, Cols : %d\n", rows, cols);
     rows = 0; cols = 0; /* Reinit variable */
     
     while ( (reader = fgetc(fp)) != EOF ) {

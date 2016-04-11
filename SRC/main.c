@@ -23,7 +23,6 @@
 #include <curses.h>
 #include <unistd.h>
 #include <time.h>
-#include <assert.h>
 #include <mpi.h>
 
 #include "memory.h"
@@ -102,8 +101,8 @@ int main(int argc, char* argv[]) {
     MPI_Bcast(size_tick, 3, MPI_INT, 0, MPI_COMM_WORLD);
 
     if ( o.method == DIVIDE_ROWS ) {
-        
-        assert( size_tick[1] % total_proc == 0 && "Erreur : La grille n'est pas divisible par le nombre de processus");
+        if ( my_id == 0 && size_tick[1] % total_proc != 0 )
+            QUIT_MSG("Grid could no be devided by the total number of process\n");
         
         for ( ; size_tick[2] >= 0; size_tick[2]--) {
             
