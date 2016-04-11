@@ -164,7 +164,7 @@ int __neighbourCell(unsigned int x, unsigned int y, Game *g) {
         if ( !isBot ) total += (b[POS(x + 1, y + 1, g)] == ALIVE_CELL); /* Right - Down */
         if ( !isTop ) total += (b[POS(x - 1, y + 1, g)] == ALIVE_CELL); /* Up - Right */
     }
-    
+   
     if ( y % g->rows != 0 ) { 
         total +=               (b[POS(x, y - 1, g)]     == ALIVE_CELL); /* Left */
         if ( !isBot ) total += (b[POS(x + 1, y - 1, g)] == ALIVE_CELL); /* Left - Down */
@@ -186,8 +186,7 @@ int __neighbourCell(unsigned int x, unsigned int y, Game *g) {
  */
 char __process(unsigned int x, unsigned int y, Game* g) {
     unsigned int neightbour = __neighbourCell(x, y, g);    
-  
-    fprintf(stderr, "total of neightbour : %d [%d, %d] - Board : %s\n", neightbour, x, y, g->board);
+ 
     if ( neightbour < 2 || neightbour > 3 ) return DEAD_CELL;
     else if ( neightbour == 3 )             return ALIVE_CELL;
     else                                    return g->board[POS(x, y, g)];

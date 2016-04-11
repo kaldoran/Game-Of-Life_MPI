@@ -38,8 +38,8 @@
 
 #define POURCENT_BEEN_ALIVE 50 /* Pourcentage of cell to keep alive during generation */
 
-#define DEAD_CELL 46
-#define ALIVE_CELL 35
+#define DEAD_CELL 0
+#define ALIVE_CELL 1
 
 /* Define constant to identify which method we use for dividing the grid */
 #define DIVIDE_ROWS 0
