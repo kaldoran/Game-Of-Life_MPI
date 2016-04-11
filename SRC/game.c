@@ -48,7 +48,7 @@ void __printLine(Game* g) {
     unsigned int i = 0;
 
     printf( "+");
-    for ( i = 0; i < g->cols + 2; i++ ) /* the 2 '+'  */
+    for ( i = 0; i < g->rows + 2; i++ ) /* the 2 '+'  */
         printf( "-");
     printf( "+\n");
 
@@ -218,11 +218,11 @@ Game* loadBoard(char* name) {
     Game *g = NULL;    
 
     if ( (fp = fopen(name, "r")) == NULL ) return NULL;
-    if ( fscanf(fp, "Rows : %d\nCols : %d\n", &rows, &cols) != 2) { fclose(fp); return NULL; }
+    if ( fscanf(fp, "Rows : %d\nCols : %d\n", &cols, &rows) != 2) { fclose(fp); return NULL; }
 
     g = newGame(rows, cols);
 
-    DEBUG_MSG("Rows : %d, Cols : %d\n", rows, cols);
+    DEBUG_MSG("Rows : %d, Cols : %d\n", g->rows, g->cols);
     rows = 0; cols = 0; /* Reinit variable */
     
     while ( (reader = fgetc(fp)) != EOF ) {
@@ -231,13 +231,13 @@ Game* loadBoard(char* name) {
         
         if ( reader == '\n') ++cols;
         else g->board[POS(cols, rows, g)] = reader;
-        
-        if ( ++rows > g->cols ) rows = 0; /* We are going to go over cols due to \n */
+
+        if ( ++rows > g->rows ) rows = 0;
     }
 
     fclose(fp);
 
-    if ( cols != g->cols && rows != g->rows ) { freeGame(g); return NULL; }
+    if ( cols != g->cols && (reader == '\n' && rows != 0) ) { freeGame(g); return NULL; }
     return g;
 }
 

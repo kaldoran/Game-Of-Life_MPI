@@ -22,6 +22,8 @@
 #include <string.h>
 #include <curses.h>
 #include <unistd.h>
+#include <time.h>
+#include <assert.h>
 #include <mpi.h>
 
 #include "memory.h"
@@ -49,11 +51,15 @@ void shareGetBorder(Game *s, int slice_size, int my_id, int total_proc) {
 
     if ( my_id != total_proc - 1) { 
         bottom_row = NEW_ALLOC_K(s->rows, char);
+        /* Received the bottom row of the top process */
         MPI_Recv(bottom_row, s->rows, MPI_CHAR, my_id + 1, 0, 
                  MPI_COMM_WORLD, MPI_STATUS_IGNORE); 
-           
-        MPI_Send(__offset(s->board, s->rows * (slice_size - 1), sizeof(s->board[0])), s->rows, MPI_CHAR, my_id + 1, 0, MPI_COMM_WORLD);
-        memcpy(__offset(s->board, s->rows * slice_size, sizeof(s->board[0])), bottom_row, s->rows);
+        
+        /* Send the bottom row of our slice */
+        MPI_Send(__offset(s->board, s->rows * (slice_size - (my_id == 0)), sizeof(s->board[0])), s->rows, MPI_CHAR, my_id + 1, 0, MPI_COMM_WORLD);
+        
+        /* Replace our bottom row by the top row of the previous process */
+        memcpy(__offset(s->board, s->rows * (slice_size + (my_id != 0)) , sizeof(s->board[0])), bottom_row, s->rows);
     }
     
     if ( my_id != 0 ) {
@@ -67,7 +73,7 @@ int main(int argc, char* argv[]) {
 
     Option o;
     Game *g, *s = NULL;
-    double time = 0.0;
+    double time_taken = 0.0;
     int total_proc, my_id, slice_size, size_tick[3];
 
     MPI_Init(&argc, &argv);
@@ -76,6 +82,7 @@ int main(int argc, char* argv[]) {
  
     if ( my_id == 0 ) {
         g = NULL;
+        srand(time(NULL));
         o = getOption(argc, argv);  /* Get all option     */
 
         if ( *o.file_path != '\0' ) /* If path file is not empty */
@@ -85,7 +92,7 @@ int main(int argc, char* argv[]) {
         if ( g == NULL ) /* If load of file fail Or no grid given */
             g = generateRandomBoard(o); /* then create one */
 
-        time = MPI_Wtime();
+        time_taken = MPI_Wtime();
         size_tick[0] = g->rows;
         size_tick[1] = g->cols;
         size_tick[2] = o.max_tick;
@@ -95,8 +102,9 @@ int main(int argc, char* argv[]) {
     MPI_Bcast(size_tick, 3, MPI_INT, 0, MPI_COMM_WORLD);
 
     if ( o.method == DIVIDE_ROWS ) {
-
-        /**  NEED THE LOOPADY LOOP **/
+        
+        assert( size_tick[1] % total_proc == 0 && "Erreur : La grille n'est pas divisible par le nombre de processus");
+        
         for ( ; size_tick[2] >= 0; size_tick[2]--) {
             
             if ( my_id == 0 )
@@ -107,12 +115,11 @@ int main(int argc, char* argv[]) {
             s = newGame(size_tick[0], 
                     slice_size + (( my_id == 0 || my_id == total_proc - 1) ? 1 : 2) );
 
-
             MPI_Scatter( g->board, size_tick[0] * slice_size, MPI_CHAR,
                     __posBufferRecv(my_id, s->board, size_tick[0]),
                     size_tick[0] * slice_size, MPI_CHAR, 
                     0, MPI_COMM_WORLD);
-
+            
             shareGetBorder(s, slice_size, my_id, total_proc);
 
             processGameTick(s);
@@ -126,8 +133,8 @@ int main(int argc, char* argv[]) {
     }
 
     if ( my_id == 0 ) {
-        time =  MPI_Wtime() - time;
-        printf("Time : %f\n", time);
+        time_taken =  MPI_Wtime() - time_taken;
+        printf("Time : %f\n", time_taken);
 
         if ( o.save_file )     
             saveBoard(g);
