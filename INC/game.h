@@ -36,7 +36,7 @@
 #define MIN_COLS_SIZE 3 /* Minimum number of cols */
 #define MIN_ROWS_SIZE 3 /* Minimum number of rows */
 
-#define POURCENT_BEEN_ALIVE 15/* Pourcentage of cell to keep alive during generation */
+#define POURCENT_BEEN_ALIVE 50 /* Pourcentage of cell to keep alive during generation */
 
 #define DEAD_CELL 46
 #define ALIVE_CELL 35

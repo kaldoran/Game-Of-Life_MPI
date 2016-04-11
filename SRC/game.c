@@ -156,23 +156,23 @@ int __neighbourCell(unsigned int x, unsigned int y, Game *g) {
     char *b = g->board;
     bool isTop, isBot;
 
-    isTop = (y == 0);
-    isBot = (y == g->rows - 1);
+    isTop = (x == 0);
+    isBot = (x == g->cols - 1);
 
     if ( y % g->rows != g->rows - 1) {
-        total += b[POS(x, y + 1, g)]; /* Right */
-        if ( !isBot ) total += b[POS(x + 1, y + 1, g)]; /* Right - Down */
-        if ( !isTop ) total += b[POS(x - 1, y + 1, g)]; /* Up - Right */
+        total +=               (b[POS(x, y + 1, g)]     == ALIVE_CELL); /* Right */
+        if ( !isBot ) total += (b[POS(x + 1, y + 1, g)] == ALIVE_CELL); /* Right - Down */
+        if ( !isTop ) total += (b[POS(x - 1, y + 1, g)] == ALIVE_CELL); /* Up - Right */
     }
-
+    
     if ( y % g->rows != 0 ) { 
-        total += b[POS(x, y - 1, g)]; /* Left */
-        if ( !isBot ) total += b[POS(x - 1, y - 1, g)]; /* Left - Down */
-        if ( !isTop ) total += b[POS(x + 1, y - 1, g)]; /* Up - Left */
+        total +=               (b[POS(x, y - 1, g)]     == ALIVE_CELL); /* Left */
+        if ( !isBot ) total += (b[POS(x + 1, y - 1, g)] == ALIVE_CELL); /* Left - Down */
+        if ( !isTop ) total += (b[POS(x - 1, y - 1, g)] == ALIVE_CELL); /* Up - Left */
     }
 
-    if ( !isBot ) total += b[POS(x + 1, y, g)]; /* Down */
-    if ( !isTop ) total += b[POS(x - 1, y, g)]; /* Up  */
+    if ( !isBot ) total += (b[POS(x + 1, y, g)] == ALIVE_CELL); /* Down */
+    if ( !isTop ) total += (b[POS(x - 1, y, g)] == ALIVE_CELL); /* Up  */
 
     return total;
 }
@@ -186,7 +186,8 @@ int __neighbourCell(unsigned int x, unsigned int y, Game *g) {
  */
 char __process(unsigned int x, unsigned int y, Game* g) {
     unsigned int neightbour = __neighbourCell(x, y, g);    
-   
+  
+    fprintf(stderr, "total of neightbour : %d [%d, %d] - Board : %s\n", neightbour, x, y, g->board);
     if ( neightbour < 2 || neightbour > 3 ) return DEAD_CELL;
     else if ( neightbour == 3 )             return ALIVE_CELL;
     else                                    return g->board[POS(x, y, g)];

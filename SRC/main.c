@@ -24,14 +24,43 @@
 #include <unistd.h>
 #include <mpi.h>
 
+#include "memory.h"
 #include "error.h"
 #include "game.h"
 #include "option.h"
 
+char *__offset(char *s, int offset, size_t object_size) {
+    return &(*(s + (offset * object_size) ));
+}
+
 char *__posBufferRecv(int my_id, char* s, int offset) {
     if ( my_id != 0 ) 
-        return &(*(s + (offset * sizeof(s[0]) )));
+        return __offset(s, offset, sizeof(s[0]));
     return s;
+}
+
+void shareGetBorder(Game *s, int slice_size, int my_id, int total_proc) {
+    char *bottom_row = "";
+    
+    if ( my_id != 0 ) {
+        MPI_Send(__offset(s->board, s->rows, sizeof(s->board[0])),
+                 s->rows, MPI_CHAR, my_id - 1, 0, MPI_COMM_WORLD); 
+    }
+
+    if ( my_id != total_proc - 1) { 
+        bottom_row = NEW_ALLOC_K(s->rows, char);
+        MPI_Recv(bottom_row, s->rows, MPI_CHAR, my_id + 1, 0, 
+                 MPI_COMM_WORLD, MPI_STATUS_IGNORE); 
+           
+        MPI_Send(__offset(s->board, s->rows, sizeof(s->board[0])), s->rows, MPI_CHAR, my_id + 1, 0, MPI_COMM_WORLD);
+        strcpy(__offset(s->board, s->rows * slice_size, sizeof(s->board[0])), bottom_row);
+    }
+    
+    if ( my_id != 0 ) {
+        MPI_Recv(s->board, s->rows, MPI_CHAR, my_id - 1, 0,
+                 MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+    }
+    
 }
 
 int main(int argc, char* argv[]) {
@@ -74,13 +103,16 @@ int main(int argc, char* argv[]) {
         s = newGame(size_tick[0], 
                    slice_size + (( my_id == 0 || my_id == total_proc - 1) ? 1 : 2) );
         
+        if ( my_id == 0 ) 
+            gamePrintInfo(g, 0);
 
         MPI_Scatter( g->board, size_tick[0] * slice_size, MPI_CHAR,
                      __posBufferRecv(my_id, s->board, size_tick[0]),
                      size_tick[0] * slice_size, MPI_CHAR, 
                      0, MPI_COMM_WORLD);
 
-        /* Fill with the right value*/
+        shareGetBorder(s, slice_size, my_id, total_proc);
+        
         processGameTick(s);
        
         MPI_Gather( __posBufferRecv(my_id, s->board, size_tick[0]),
@@ -101,7 +133,8 @@ int main(int argc, char* argv[]) {
 
         freeGame(g);           /* Free space we are not in Java */
     }
-
+    
+    free(s);
     MPI_Finalize();
     
     exit(EXIT_SUCCESS);
