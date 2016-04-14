@@ -22,6 +22,7 @@
 #include <string.h>
 #include <curses.h>
 #include <unistd.h>
+#include <math.h>
 #include <time.h>
 #include <mpi.h>
 
@@ -68,12 +69,121 @@ void shareGetBorder(Game *s, int slice_size, int my_id, int total_proc) {
     
 }
 
+Game* __getSubMatrice(Game *g, int id, unsigned int slice_size, unsigned int proc_slice ) {
+    Game *s = NULL;
+    /* The sender compute all the offset and place the matrix. 
+     * At the good place
+     * At max we send 2 row + 2 cols, but we avoid 
+     */
+    unsigned int x, y, startx, starty;
+   
+    startx = (id / proc_slice) * slice_size;
+    starty = (id % proc_slice) * slice_size;
+    DEBUG_MSG("[%d] Will start at : [%d, %d] s size : [%d,%d]\n", id, startx, starty);
+ /*
+    unsigned startx, starty, x, y, xost, yosl, xosb, yosr;
+ 
+    xost = ( startx > 0 );
+    yosl = ( starty > 0 );
+
+    xosb = ( startx + slice_size != g->cols );
+    yosr = ( starty + slice_size != g->rows );
+
+    s = newGame(slice_size + yosr + yosl
+              , slice_size + xost + xosb );
+    
+    DEBUG_MSG("[%d] Will start at : [%d, %d] s size : [%d,%d]\n", id, startx, starty, s->rows, s->cols);
+    DEBUG_MSG("[%d] Offset : left %d - top %d - right %d - bot %d\n", id, yosl, xost, yosr, xosb);
+*/
+    s = newGame(slice_size, slice_size);
+    for (x = 0; x < slice_size; x++ ) {
+        for (y = 0; y < slice_size; y++ ) {
+            s->board[POS(x, y, s)] = g->board[POS(startx + x, starty + y, g)];
+        }
+    }
+    
+    return s;
+}
+
+Game* send_submatrice(Game *g) {
+    Game *tmp = NULL;
+    int total_proc, i;
+    unsigned proc_slice, slice_size;
+
+    MPI_Comm_size(MPI_COMM_WORLD, &total_proc);    
+
+    proc_slice = sqrt(total_proc);
+    slice_size = g->rows / proc_slice;
+    
+    for ( i = 1; i < total_proc; i++) {
+        fprintf(stderr, "going to send : [ %d - %d] %d\n", i, slice_size, proc_slice);
+        tmp = __getSubMatrice(g, i, slice_size, proc_slice ); 
+        gamePrintInfo(tmp, i);
+        MPI_Send(tmp->board, tmp->rows * tmp->cols, MPI_CHAR, i, 0, MPI_COMM_WORLD);
+        free(tmp);
+    }   
+    
+    return __getSubMatrice(g, 0, slice_size, proc_slice);
+
+}
+
+Game* __initPlaceBoard(Game *tmp, int rows_size, int cols_size, unsigned int slice_size) {
+    Game *s = NULL;
+    int total_proc, my_id;
+    unsigned int proc_slice, startx, starty, xost, yosl, xosb, yosr, x, y;
+
+    MPI_Comm_rank(MPI_COMM_WORLD, &my_id);
+    MPI_Comm_size(MPI_COMM_WORLD, &total_proc);   
+
+    proc_slice = sqrt(total_proc);
+    slice_size = tmp->rows;
+
+    startx = (my_id / proc_slice) * slice_size;
+    starty = (my_id % proc_slice) * slice_size;
+ 
+    xost = ( startx > 0 );
+    yosl = ( starty > 0 );
+
+    xosb = ( startx + slice_size != ((unsigned) cols_size) );
+    yosr = ( starty + slice_size != ((unsigned) rows_size) );
+    
+    s = newGame(slice_size + yosr + yosl
+              , slice_size + xost + xosb );
+    
+    for (x = 0; x < slice_size; x++ ) {
+        for (y = 0; y < slice_size; y++ ) {
+            s->board[POS(x + xost, y + yosl, s)] = tmp->board[POS(x, y, tmp)];
+        }
+    }
+
+    return s;
+}
+
+Game* recieved_matrice(int rows_size, int cols_size) {
+    Game *s, *tmp;
+    int total_proc; 
+    unsigned int slice_size;
+
+    MPI_Comm_size(MPI_COMM_WORLD, &total_proc);   
+    slice_size = rows_size / sqrt(total_proc);
+    
+    tmp = newGame(slice_size, slice_size );
+
+    MPI_Recv(tmp->board, slice_size * slice_size, MPI_CHAR, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+    gamePrintInfo(tmp, 3);
+    s = __initPlaceBoard(tmp, rows_size, cols_size, slice_size);
+    freeGame(tmp);
+    
+    return s;
+}
+
+
 int main(int argc, char* argv[]) {
 
     Option o;
     Game *g, *s = NULL;
     double time_taken = 0.0;
-    int total_proc, my_id, slice_size, size_tick[3];
+    int total_proc, my_id, slice_size, buffer_size, size_tick[4];
 
     MPI_Init(&argc, &argv);
     MPI_Comm_size(MPI_COMM_WORLD,&total_proc);
@@ -95,12 +205,23 @@ int main(int argc, char* argv[]) {
         size_tick[0] = g->rows;
         size_tick[1] = g->cols;
         size_tick[2] = o.max_tick;
+        size_tick[3] = o.method;
 
     }
 
-    MPI_Bcast(size_tick, 3, MPI_INT, 0, MPI_COMM_WORLD);
-
-    if ( o.method == DIVIDE_ROWS ) {
+    MPI_Bcast(size_tick, 4, MPI_INT, 0, MPI_COMM_WORLD);
+        
+    if ( size_tick[3] == DIVIDE_MATRICE ) {     
+        if ( my_id == 0 ) {
+            gamePrintInfo(g, 0);
+            s = send_submatrice(g);
+        }
+        else {
+            fprintf(stderr, "Recv : %d\n", my_id);
+            s = recieved_matrice(size_tick[0], size_tick[1]);
+            gamePrintInfo(s, my_id);
+        }
+    } else if ( o.method == DIVIDE_ROWS ) {
         if ( my_id == 0 && size_tick[1] % total_proc != 0 )
             QUIT_MSG("Grid could no be devided by the total number of process\n");
         
@@ -111,8 +232,10 @@ int main(int argc, char* argv[]) {
             
             /* Lets allocated the memory for the shared buffer at the same moment */
             slice_size = size_tick[1] / total_proc;
+            buffer_size = ( my_id == 0 || my_id == total_proc - 1) ? 1 : 2;
+
             s = newGame(size_tick[0], 
-                    slice_size + (( my_id == 0 || my_id == total_proc - 1) ? 1 : 2) );
+                    slice_size + buffer_size );
 
             MPI_Scatter( g->board, size_tick[0] * slice_size, MPI_CHAR,
                     __posBufferRecv(my_id, s->board, size_tick[0]),
@@ -143,7 +266,7 @@ int main(int argc, char* argv[]) {
     
     free(s);
     MPI_Finalize();
-    
+
     exit(EXIT_SUCCESS);
 }
 

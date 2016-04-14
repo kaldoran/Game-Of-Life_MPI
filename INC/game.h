@@ -54,6 +54,7 @@
  * %return  : The associate position on the board
  */
 #define POS(X, Y, G) (__position(X,Y,G))
+int __position(unsigned int x, unsigned int y, Game *g);
 
 /**
  * Function that print the board, this function determine if we need to print it or not
