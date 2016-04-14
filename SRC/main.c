@@ -119,28 +119,6 @@ Game* sendAllSubMatrice(Game *g) {
 
 }
 
-int sendAllRows(Game *g, int rows_size, int cols_size) {
-    Game *s = NULL;
-    int my_id, total_proc, slice_size, buffer_size;
-    
-    MPI_Comm_rank(MPI_COMM_WORLD, &my_id);
-    MPI_Comm_size(MPI_COMM_WORLD, &total_proc);   
-    
-    /* Lets allocated the memory for the shared buffer at the same moment */
-    slice_size = cols_size / total_proc;
-    buffer_size = ( my_id == 0 || my_id == total_proc - 1) ? 1 : 2;
-
-    s = newGame(rows_size, 
-            slice_size + buffer_size );
-
-    MPI_Scatter( g->board, rows_size * slice_size, MPI_CHAR,
-            __posBufferRecv(my_id, s->board, rows_size),
-            rows_size * slice_size, MPI_CHAR, 
-            0, MPI_COMM_WORLD);
-
-    return slice_size;
-}
-
 /**
  * Private function which replace the received matrix and make space for border
  * %param tmp : Tmp board which contains the received matrix
@@ -186,7 +164,7 @@ Game* __initPlaceBoard(Game *tmp, int rows_size, int cols_size, unsigned int sli
  * %param cols_size : Total number of column of original matrix
  * %return : return the board including the offset for border sharing
  */
-Game* recievedMatrix(int rows_size, int cols_size) {
+Game* receivedMatrix(int rows_size, int cols_size) {
     Game *s, *tmp;
     int total_proc; 
     unsigned int slice_size;
@@ -216,7 +194,6 @@ int main(int argc, char* argv[]) {
     MPI_Comm_rank(MPI_COMM_WORLD,&my_id);
  
     if ( my_id == 0 ) {
-        g = NULL;
         srand(time(NULL));
         o = getOption(argc, argv);  /* Get all option     */
 
@@ -245,15 +222,30 @@ int main(int argc, char* argv[]) {
     /********************/
 
     if ( size_tick[3] == DIVIDE_MATRICE) {
+        if ( my_id == 0 && ( size_tick[0] % total_proc != 0 
+            || size_tick[1] != size_tick[0] ) ) {
+
+            QUIT_MSG("Grid could no be devided by the total number of process\n");
+        }
+
         if ( my_id == 0 ) 
             s = sendAllSubMatrice(g);
         else 
-            s = recievedMatrix(size_tick[0], size_tick[1]);
+            s = receivedMatrix(size_tick[0], size_tick[1]);
     } else {
         if ( my_id == 0 && size_tick[1] % total_proc != 0 )
             QUIT_MSG("Grid could no be devided by the total number of process\n");
-   
-        slice_size = sendAllRows(g, size_tick[0], size_tick[1]);
+
+        /* Lets allocated the memory for the shared buffer at the same moment */
+        slice_size = size_tick[1] / total_proc;
+
+        s = newGame(size_tick[0], 
+                slice_size + ((my_id == 0 || my_id == total_proc - 1) ? 1 : 2) );
+
+        MPI_Scatter( g->board, size_tick[0] * slice_size, MPI_CHAR,
+                __posBufferRecv(my_id, s->board, size_tick[0]),
+                size_tick[0] * slice_size, MPI_CHAR, 
+                0, MPI_COMM_WORLD);
     }
 
     /********************/
@@ -263,8 +255,14 @@ int main(int argc, char* argv[]) {
     /********************/
     
     for ( ; size_tick[2] >= 0; size_tick[2]--) {
+       
+        /* This pre-process indication is defined by the make display command */
+
+        /* If we need to display, Then we going to print */
+        #if PRINT
         if ( my_id == 0 )
             gamePrintInfo(g, 0);
+        #endif
 
         /* Time to share border */
         if ( size_tick[3] == DIVIDE_MATRICE )
@@ -274,15 +272,17 @@ int main(int argc, char* argv[]) {
 
         processGameTick(s);
 
+        /* If we need to print, then we will send all data to process 0 */
+        #if PRINT
         /* Time to send all data to process 0 */
         if ( size_tick[3] == DIVIDE_MATRICE ) 
             ; /* All send matrix to 0 */ 
         else
             MPI_Gather( __posBufferRecv(my_id, s->board, size_tick[0]),
-                       size_tick[0] * slice_size, MPI_CHAR,
-                       g->board, size_tick[0] * slice_size, MPI_CHAR,
-                       0, MPI_COMM_WORLD);
-        
+                        size_tick[0] * slice_size, MPI_CHAR,
+                        g->board, size_tick[0] * slice_size, MPI_CHAR,
+                        0, MPI_COMM_WORLD);
+        #endif
     }
                
     if ( my_id == 0 ) {
