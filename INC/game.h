@@ -88,7 +88,10 @@ void freeGame(Game* g);
  */
 Game* generateRandomBoard(Option o);
 
-void processGameTick(Game *g);
+void processRowsGameTick(Game *g);
+void processMatrixGameTick(Game *g, int my_x, int my_y, int slice_size);
+
+
 /**
  * Load in memory a game / board contains into a file
  * %param name : path to the file to load

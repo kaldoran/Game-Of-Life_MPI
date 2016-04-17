@@ -45,25 +45,26 @@ char *__posBufferRecv(int my_id, char* s, int offset) {
 void shareGetBorder(Game *s, int slice_size, int my_id, int total_proc) {
     char *bottom_row = "";
     
-    if ( my_id != 0 ) {
+    if ( my_id != 0 ) { /* send bottom row to process on top */
         MPI_Send(__offset(s->board, s->rows, sizeof(s->board[0])),
                  s->rows, MPI_CHAR, my_id - 1, 0, MPI_COMM_WORLD); 
     }
 
     if ( my_id != total_proc - 1) { 
         bottom_row = NEW_ALLOC_K(s->rows, char);
-        /* Received the bottom row of the top process */
+        /* Received the top row of the bottom process */
         MPI_Recv(bottom_row, s->rows, MPI_CHAR, my_id + 1, 0, 
-                 MPI_COMM_WORLD, MPI_STATUS_IGNORE); 
+                 MPI_COMM_WORLD, MPI_STATUS_IGNORE);   
         
         /* Send the bottom row of our slice */
-        MPI_Send(__offset(s->board, s->rows * (slice_size - (my_id == 0)), sizeof(s->board[0])), s->rows, MPI_CHAR, my_id + 1, 0, MPI_COMM_WORLD);
+        MPI_Send(__offset(s->board, s->rows * (slice_size - (my_id == 0)), 
+                 sizeof(s->board[0])), s->rows, MPI_CHAR, my_id + 1, 0, MPI_COMM_WORLD);
         
         /* Replace our bottom row by the top row of the previous process */
         memcpy(__offset(s->board, s->rows * (slice_size + (my_id != 0)) , sizeof(s->board[0])), bottom_row, s->rows);
     }
     
-    if ( my_id != 0 ) {
+    if ( my_id != 0 ) { /* Recv the bottom row of the process at top*/
         MPI_Recv(s->board, s->rows, MPI_CHAR, my_id - 1, 0,
                  MPI_COMM_WORLD, MPI_STATUS_IGNORE);
     }
@@ -101,15 +102,57 @@ void __mergeMatrix(Game *src, Game *dest, int startx, int starty) {
     }
 }
 
-/* 
-void shareMatrixBorder(Game *g, int slice_size, int my_x, int my_y, int proc_slice ) {
-    Game *tmp = NULL;
-    if ( my_y != proc_slice - 1) {
-        tmp = newGame(slice_size, slice_size);
+/*  Matrix : 3 x 3, Np = 9 
+ *  [V][S] [S][V][S] [S][V] < x: 0
+ *  [S][S] [S][S][S] [S][S]  
+ *
+ *  [S][S] [S][S][S] [S][S] < x: 1
+ *  [V][S] [S][V][S] [S][V] < 
+ *  [S][S] [S][S][S] [S][S] < 
+ *
+ *  [S][S] [S][S][S] [S][S] < x: 2
+ *  [V][S] [S][V][S] [S][V] < 
+ *   y: 0    y: 1     y: 2
+ *  
+ *  S = Buffer   
+ *  V = Value of original 3 x 3 matrix  
+ */
 
+
+void shareMatrixBorder(Game *s, int my_x, int my_y, int slice_size, int proc_slice ) {
+    int my_id;
+    Game *tmp, *buf;
+    tmp = NULL;
+    buf = newGame(1, slice_size);
+    
+    my_id = my_y + my_x * proc_slice;
+
+    if ( my_y != proc_slice - 1) { /* Send right column */
+        tmp = __subMatrix(s, (my_x != 0), slice_size - (my_y == 0), slice_size, 1);
+        MPI_Send(tmp->board, tmp->rows * tmp->cols, MPI_CHAR, my_id + 1, 0, MPI_COMM_WORLD);
+        free(tmp);
     }
+
+    if ( my_y != 0 ) { /* get right column and send our left */
+        MPI_Recv(buf->board, buf->cols * buf->rows, MPI_CHAR, my_id - 1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+        tmp = __subMatrix(s, (my_x != 0), 1, slice_size, 1); /* Start at 1 due to buffer */
+        
+        MPI_Send(tmp->board, tmp->rows * tmp->cols, MPI_CHAR, my_id - 1, 0, MPI_COMM_WORLD);   
+        __mergeMatrix(buf, s, (my_x != 0), 0);
+        free(tmp);
+    }
+
+    if ( my_y != proc_slice - 1) { /* get the left column of neighbours */
+        MPI_Recv(buf->board, buf->cols * buf->rows, MPI_CHAR, my_id + 1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+        __mergeMatrix(buf, s, (my_x != 0), slice_size + 1 - (my_y == 0));
+    }
+
+    free(buf);
+    /* Should turn the buff [newGame(1, slice_size); but in this case it would be the same as the
+     * previous buffer, so i do not free it for allocate another one 
+     */
 }
-*/
+
 void gatherMatrix(Game *g, Game *s, int my_x, int my_y, int slice_size, int proc_slice, int total_proc) {
     Game* tmp = NULL;
     
@@ -125,8 +168,8 @@ void gatherMatrix(Game *g, Game *s, int my_x, int my_y, int slice_size, int proc
         for ( total_recv = 0; total_recv < total_proc; total_recv++ ) {
             MPI_Recv(tmp->board, tmp->rows * tmp->cols, MPI_CHAR, MPI_ANY_SOURCE, 0, MPI_COMM_WORLD, &status);
             __mergeMatrix(tmp, g, 
-                    (status.MPI_SOURCE % proc_slice) * slice_size, 
-                    (status.MPI_SOURCE / proc_slice) * slice_size);
+                    (status.MPI_SOURCE / proc_slice) * slice_size, 
+                    (status.MPI_SOURCE % proc_slice) * slice_size);
         }
         
         free(tmp);
@@ -218,10 +261,10 @@ int main(int argc, char* argv[]) {
     /********************/
 
     if ( size_tick[3] == DIVIDE_MATRICE) {
-        if ( my_id == 0 && ( size_tick[0] % total_proc != 0 
+        if ( my_id == 0 && ( ((size_tick[0] * size_tick[1]) % total_proc) != 0
             || size_tick[1] != size_tick[0] ) ) {
 
-            QUIT_MSG("Grid could no be devided by the total number of process\n");
+            QUIT_MSG("Grid could no be devided by the total number of process %d - %d\n", size_tick[1], total_proc);
         }
 
         proc_slice = sqrt(total_proc);
@@ -255,9 +298,27 @@ int main(int argc, char* argv[]) {
     /*   Process tick   */
     /********************/
     
-    for ( ; size_tick[2] >= 0; size_tick[2]--) {
+    #if PRINT
+    if ( my_id == 0 )
+        gamePrintInfo(g, size_tick[2]);
+    #endif
+    for ( ; size_tick[2] > 0; size_tick[2]--) {
        
         /* This pre-process indication is defined by the make display command */
+
+        /* Time to share border */
+        if ( size_tick[3] == DIVIDE_MATRICE ) {
+            shareMatrixBorder(s, my_x, my_y, slice_size, proc_slice); /* Share border too */
+            processMatrixGameTick(s, my_x, my_y, slice_size);
+            gatherMatrix(g, s, my_x, my_y, slice_size, proc_slice, total_proc);
+        } else {
+            shareGetBorder(s, slice_size, my_id, total_proc);
+            processRowsGameTick(s);
+            MPI_Gather( __posBufferRecv(my_id, s->board, size_tick[0]),
+                        size_tick[0] * slice_size, MPI_CHAR,
+                        g->board, size_tick[0] * slice_size, MPI_CHAR,
+                        0, MPI_COMM_WORLD);
+        }
 
         /* If we need to display, Then we going to print */
         #if PRINT
@@ -265,24 +326,7 @@ int main(int argc, char* argv[]) {
             gamePrintInfo(g, size_tick[2]);
         #endif
 
-        /* Time to share border */
-        if ( size_tick[3] == DIVIDE_MATRICE )
-            ; /* Share border too */
-        else
-            shareGetBorder(s, slice_size, my_id, total_proc);
-
-        processGameTick(s);
-
-        /* If we need to print, then we will send all data to process 0 */
-        #if PRINT
-        if ( size_tick[3] == DIVIDE_MATRICE ) 
-            gatherMatrix(g, s, my_x, my_y, slice_size, proc_slice, total_proc);
-        else
-            MPI_Gather( __posBufferRecv(my_id, s->board, size_tick[0]),
-                        size_tick[0] * slice_size, MPI_CHAR,
-                        g->board, size_tick[0] * slice_size, MPI_CHAR,
-                        0, MPI_COMM_WORLD);
-        #endif
+        MPI_Barrier(MPI_COMM_WORLD);
     }
     
     if ( my_id == 0 ) {

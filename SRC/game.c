@@ -192,7 +192,7 @@ char __process(unsigned int x, unsigned int y, Game* g) {
     else                                    return g->board[POS(x, y, g)];
 }
 
-void processGameTick(Game *g) {
+void processRowsGameTick(Game *g) {
     int my_id, total_proc;
     unsigned int x, y;
     char* next;
@@ -207,7 +207,22 @@ void processGameTick(Game *g) {
             next[POS(x, y, g)] = __process(x, y, g);
   
     free(g->board);
-    g->board = NULL;
+    g->board = next;
+}
+
+void processMatrixGameTick(Game *g, int my_x, int my_y, int slice_size) {
+    char *next;
+    int x, y, startx, starty;
+
+    startx = (my_x != 0);
+    starty = (my_y != 0);
+
+    next = __newBoard(g->rows, g->cols);
+    for ( x = 0; x < slice_size; x++)
+        for ( y = 0; y < slice_size; y++)
+            next[POS(x + startx, y + starty, g)] = __process(x + startx, y + starty, g);
+
+    free(g->board);
     g->board = next;
 }
 
