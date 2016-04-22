@@ -218,6 +218,7 @@ void processMatrixGameTick(Game *g, int my_x, int my_y, int slice_size) {
     starty = (my_y != 0);
 
     next = __newBoard(g->rows, g->cols);
+    gamePrintInfo(g, 9999);
     for ( x = 0; x < slice_size; x++)
         for ( y = 0; y < slice_size; y++)
             next[POS(x + startx, y + starty, g)] = __process(x + startx, y + starty, g);
