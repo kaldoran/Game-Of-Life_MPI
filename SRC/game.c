@@ -19,9 +19,7 @@
 
 #include <stdlib.h>
 #include <stdio.h>
-#include <curses.h>
 #include <string.h>
-#include <stdbool.h>
 #include <mpi.h>
 
 #include "error.h"
