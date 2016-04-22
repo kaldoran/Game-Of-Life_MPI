@@ -22,7 +22,6 @@
 /* FICHIER : game.h                                          */
 /*---------------------------------------------------------- */
 
-
 #ifndef GAME_H
 #define GAME_H
 
@@ -88,9 +87,20 @@ void freeGame(Game* g);
  */
 Game* generateRandomBoard(Option o);
 
+/**
+ * Function that process the board if the method used it by rows
+ * %param g : Game which contains the Board to process
+ */
 void processRowsGameTick(Game *g);
-void processMatrixGameTick(Game *g, int my_x, int my_y, int slice_size);
 
+/**
+ * Function that process the board if the method used is by matrix
+ * %param g : Game which contains the board to process
+ * %param my_x : My process id on x
+ * %param my_y : My process id on y
+ * %param slice_size : Size of the slice either on rows or columns
+ */
+void processMatrixGameTick(Game *g, int my_x, int my_y, int slice_size);
 
 /**
  * Load in memory a game / board contains into a file
