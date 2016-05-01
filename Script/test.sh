@@ -78,12 +78,12 @@ for (( i = $START; i <= $END; i++ )); do
         echo "[TEST] ${PROC} processus - ${TOTAL_ITERATION} iteration";
 
         echo -n "[TEST] Row division    : START .. ";
-        /usr/bin/mpirun -np $PROC $PROG $DEFAULT_OPT > /dev/null
+        mpirun -np $PROC $PROG $DEFAULT_OPT > /dev/null
         mv output.gol compare.gol
         echo -e "END";
 
         echo -n "[TEST] Matrix division : START .. ";
-        /usr/bin/mpirun -np $PROC $PROG $DEFAULT_OPT -m > /dev/null
+        mpirun -np $PROC $PROG $DEFAULT_OPT -m > /dev/null
         DIFF=$(diff output.gol compare.gol 2>&1)
         echo -e "END";
 
