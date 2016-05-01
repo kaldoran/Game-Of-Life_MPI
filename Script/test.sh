@@ -35,7 +35,7 @@ if ! [ -e $PROG ]; then
 fi;
 
 if [ ! -z "$1" ]; then
-    TO_DO=$( echo "scale=0; sqrt($2)" | bc -l );
+    TO_DO=$( echo "scale=0; sqrt($1)" | bc -l );
     if [ $TO_DO -le $START ]; then
         echo "$1 need to be > 2";
     else

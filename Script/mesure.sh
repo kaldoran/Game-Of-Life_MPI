@@ -45,13 +45,13 @@ mkdir -p Time
 rm ./Time/* 2> /dev/null
 
 # Valeurs tiré de la table de 1, 4, 16, 36 et 64
-GRID_SIZE=(64 192 320 520 1206)
+GRID_SIZE=(64 192 320 512 1088)
 
 # Valeur tiré de la table Y x Y 
 # Car il faut Y Processus sur l'horizontal & Y sur la verticale
 TOTAL_PROC=( 1 4 16 64)
 
-for (( i = 0; i <= ${#GRID_SIZE[@]}; i++)); do
+for (( i = 0; i < ${#GRID_SIZE[@]}; i++)); do
     TOTAL_ITERATION=$(( $(( $RANDOM % $MAX_ITERATION )) + 1))
     DEFAULT_OPT="-f ./Script/random.gol";
 
@@ -77,9 +77,13 @@ for (( i = 0; i <= ${#GRID_SIZE[@]}; i++)); do
         mpirun -np ${NB_PROC} $PROG $DEFAULT_OPT -t $TOTAL_ITERATION | awk '{printf "%f ", $3}' >> "${FILE}.dat"
         echo -e "END";
 
-        echo -ne "\t - Matrix division timer : START .. "
-        mpirun -np ${NB_PROC} $PROG $DEFAULT_OPT -m -t $TOTAL_ITERATION | awk '{printf "%f ", $3}' >> "${FILE}.dat"
-        echo -e "END\n";
+        if [ "$SIZE" -gt 400 ] && [ "$NB_PROC" -eq 1 ]; then
+            echo -n "0.000000" >> "${FILE}.dat" 
+        else 
+            echo -ne "\t - Matrix division timer : START .. "
+            mpirun -np ${NB_PROC} $PROG $DEFAULT_OPT -m -t $TOTAL_ITERATION | awk '{printf "%f ", $3}' >> "${FILE}.dat"
+            echo -e "END\n";
+        fi
 
         echo "" >> "${FILE}.dat"
     done
