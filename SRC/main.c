@@ -84,27 +84,28 @@ int main(int argc, char* argv[]) {
             QUIT_MSG("Grid could no be devided by the total number of process %d - %d\n", size_tick[1], total_proc);
         }
  
-        if ( my_id == 0 ) { 
-            s = sendAllSubMatrice(g, slice_size, proc_slice);
-        } else
-            s = receivedMatrix(my_x, my_y, slice_size, proc_slice);
-        
+        if ( my_id == 0 ) 
+            sendAllSubMatrice(g, slice_size, proc_slice);
+         
+        s = receivedMatrix(my_x, my_y, slice_size, proc_slice);
     } else {
         if ( my_id == 0 && size_tick[1] % total_proc != 0 )
             QUIT_MSG("Grid could no be devided by the total number of process\n");
 
         /* Lets allocated the memory for the shared buffer at the same moment */
         slice_size = size_tick[1] / total_proc;
-
-        s = newGame(size_tick[0], 
-                slice_size + ((my_id == 0 || my_id == total_proc - 1) ? 1 : 2) );
+        
+        if ( total_proc > 1 ) /* Next formular only work if there is more than 1 proc */
+            s = newGame(size_tick[0], slice_size + (my_id == 0) + (my_id == total_proc - 1)  );
+        else
+            s = newGame(size_tick[0], slice_size);
 
         MPI_Scatter( g->board, size_tick[0] * slice_size, MPI_CHAR,
                 __posBufferRecv(my_id, s->board, size_tick[0]),
                 size_tick[0] * slice_size, MPI_CHAR, 
                 0, MPI_COMM_WORLD);
     }
-    
+
     /********************/
     /*     Init end     */
     /* -----------------*/
@@ -119,7 +120,7 @@ int main(int argc, char* argv[]) {
     
     for ( ; size_tick[2] > 0; size_tick[2]--) {
        
-        if ( size_tick[3] == DIVIDE_MATRICE ) { 
+        if ( size_tick[3] == DIVIDE_MATRICE ) {
             shareMatrixBorder(s, my_x, my_y, slice_size, proc_slice);
             processMatrixGameTick(s, my_x, my_y, slice_size);
             gatherMatrix(g, s, my_x, my_y, slice_size, proc_slice, total_proc);
@@ -149,7 +150,7 @@ int main(int argc, char* argv[]) {
         freeGame(g);           /* Free space we are not in Java */
     }
     
-    free(s);
+    freeGame(s);
     MPI_Finalize();
 
     exit(EXIT_SUCCESS);

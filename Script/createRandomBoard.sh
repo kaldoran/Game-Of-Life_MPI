@@ -1,7 +1,7 @@
 #!/bin/bash
 
-readonly MIN_ROWS=2
-readonly MIN_COLS=2
+readonly MIN_ROWS=4
+readonly MIN_COLS=4
 readonly PROBA_ALIVE_CELL=30
 
 # Needed for print pourcentage value
@@ -46,7 +46,7 @@ if [ "$COLS" -lt "$MIN_COLS" ]; then COLS=$MIN_COLS; fi
 
 if [ -z "$3" ]; then
     echo "$ROWS rows and $COLS column";
-fi
+fi;
 
 FILE_NAME="./Script/random.gol"
 POURCENT_SLICE=$(echo "scale=2;$ROWS/100" | bc -l)
@@ -67,6 +67,7 @@ for (( i = 1; i <= $ROWS; i++ )); do
     printf '\r%.2f %% done' "$(echo "scale=2; $i/$POURCENT_SLICE" | bc -l )"
 done;
 echo ""
+
 if [ -z "$3" ]; then
     echo "File generate under the name : $FILE_NAME";
 fi

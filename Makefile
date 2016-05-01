@@ -1,5 +1,5 @@
 # Release/Debug
-DEBUG=yes
+DEBUG=no
 
 # Directories
 SRC_DIR = SRC
@@ -26,11 +26,6 @@ OBJ = $(addsuffix .o, $(basename $(subst ${SRC_DIR}, ${OBJ_DIR}, ${SRC})))
 .SUFFIXES:
 
 all: dir $(BIN_DIR)/$(BIN)
-
-TOTAL=10
-tests-rand: rebuild
-tests-rand:
-	./Script/test_random.sh $(TOTAL)
 
 tests: rebuild
 tests:

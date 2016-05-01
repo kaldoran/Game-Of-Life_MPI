@@ -93,7 +93,7 @@ void gatherMatrix(Game *g, Game *s, int my_x, int my_y, int slice_size, int proc
  * %param proc_slice : Total number of processus by rows or columns
  */
  
-Game *sendAllSubMatrice(Game *g, int slice_size, int proc_slice);
+void sendAllSubMatrice(Game *g, int slice_size, int proc_slice);
 
 /**
  * Received a matrix send by process 0
