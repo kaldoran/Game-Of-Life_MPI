@@ -96,7 +96,7 @@ int main(int argc, char* argv[]) {
         slice_size = size_tick[1] / total_proc;
         
         if ( total_proc > 1 ) /* Next formular only work if there is more than 1 proc */
-            s = newGame(size_tick[0], slice_size + (my_id == 0) + (my_id == total_proc - 1)  );
+            s = newGame(size_tick[0], slice_size + (my_id != 0) + (my_id != total_proc - 1)  );
         else
             s = newGame(size_tick[0], slice_size);
 
@@ -136,7 +136,7 @@ int main(int argc, char* argv[]) {
         /* If we need to display, Then we going to print */
         #if PRINT
         if ( my_id == 0 )
-            gamePrintInfo(g, size_tick[2]);
+            gamePrintInfo(g, size_tick[2] - 1);
         #endif
     } 
     

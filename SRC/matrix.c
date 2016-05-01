@@ -52,7 +52,7 @@ void shareMatrixBorder(Game *s, int my_x, int my_y, int slice_size, int proc_sli
     Game *tmp, *buf;
     tmp = NULL;
     buf = newGame(1, slice_size);
-    
+   
     my_id = my_y + my_x * proc_slice;
     
     /* Send Right - Left*/
@@ -107,16 +107,16 @@ void shareMatrixBorder(Game *s, int my_x, int my_y, int slice_size, int proc_sli
     
 
     if ( my_y != proc_slice - 1 && my_x != proc_slice - 1) { /* Send to bottom right */
-        /* Get the top left element */
-        MPI_Recv(&s->board[POS(slice_size + (my_x != 0), slice_size, s)], 1, MPI_CHAR, 
+        /* Get the bottom right element */
+        MPI_Recv(&s->board[POS(slice_size + (my_x != 0), slice_size + (my_y != 0), s)], 1, MPI_CHAR, 
                  my_id + proc_slice + 1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 
         MPI_Send(&s->board[POS(slice_size - (my_x == 0), slice_size - (my_y == 0), s)], 1, MPI_CHAR, 
                  my_id + proc_slice + 1, 0, MPI_COMM_WORLD);
-
     }
 
     if ( my_y != 0 && my_x != 0 ) {
+        /* Get the top left element */
         MPI_Recv(&s->board[POS(0, 0, s)], 1, MPI_CHAR, 
                  my_id - proc_slice - 1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
     }
@@ -125,6 +125,7 @@ void shareMatrixBorder(Game *s, int my_x, int my_y, int slice_size, int proc_sli
         MPI_Send(&s->board[POS(1, slice_size - (my_y == 0), s)], 1, MPI_CHAR, my_id - proc_slice + 1, 0, MPI_COMM_WORLD); 
 
     if ( my_y != 0 && my_x != proc_slice - 1 ) { /* Send  to bottom left */
+        /* Get the bottom left element */
         MPI_Recv(&s->board[POS(slice_size + (my_x != 0) ,0, s)], 1, MPI_CHAR, 
                  my_id + proc_slice - 1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 
@@ -132,6 +133,7 @@ void shareMatrixBorder(Game *s, int my_x, int my_y, int slice_size, int proc_sli
     }
 
     if ( my_y != proc_slice - 1 && my_x != 0 ) {
+        /* Get the top right element */
         MPI_Recv(&s->board[POS(0, slice_size + (my_y != 0), s)], 1, MPI_CHAR, 
                  my_id - proc_slice + 1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
     }

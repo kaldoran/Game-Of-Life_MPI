@@ -1,8 +1,8 @@
 #!/bin/bash
 
-readonly MIN_ROWS=4
-readonly MIN_COLS=4
-readonly PROBA_ALIVE_CELL=30
+readonly MIN_ROWS=3
+readonly MIN_COLS=3
+readonly PROBA_ALIVE_CELL=40
 
 # Needed for print pourcentage value
 LC_NUMERIC=C
