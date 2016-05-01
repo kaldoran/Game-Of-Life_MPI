@@ -1,5 +1,8 @@
 #!/bin/bash
 
+START=2
+END=50
+MAX_ITERATION=100;
 readonly PROG="./BIN/GameOfLife"
 
 function diffOutput {
@@ -12,8 +15,6 @@ function diffOutput {
         return 0;
     fi
 }
-
-AllSucces="";
 
 if ! [ -e $PROG ]; then
     echo "[TEST] Compilation : START"
@@ -29,75 +30,79 @@ fi;
 
 echo -e "--------------\n";
 
-input=("block.gol" "blinker.gol" "beacon.gol" "empty.gol" "toad.gol")
+if [ ! -z "$1" ]; then
+    if [ $1 -lt $START ]; then
+        echo "'$1' need to be an integer > 1";
+        exit;
+    else
+        START=$1;
+    fi
+fi
+
+if [ ! -z "$2" ]; then
+    to=$(echo "scale=0;sqrt( $2 )" | bc -l);
+    if [[ $to -gt $END ]]; then
+        echo "$2 need to be an integer > 0";
+        exit;
+    else
+        echo "Be carefull, with integer (around) > 2000, the program may not end [Max 2500]";
+        echo ""; 
+        END=$to; 
+    fi
+fi
+
+if [ $END -gt 50 ]; then
+    END=50
+fi
+
+
+# Number of proc if the side size is X
+# [X]="nbProc1,nbProc2" [Y]="nbProc3"
+# 
+# For example : [9]="3,9"
+# => If the slice if 9 wide, then test with 3 proc then with 9
+declare -A nbProcSpec=( [100]="4" );
 
 # If you use odd number of iteration those file WON'T work [cause all of them got a period of 2 
-output=("block.gol" "blinker.gol" "beacon.gol" "empty.gol" "toad.gol")
 
-thread=(1 2 4 8 16)
+AllSucces="";
+for (( i = $START; i <= $END; i++)); do
+    TOTAL_ITERATION=$(( $RANDOM % $MAX_ITERATION + 1))
+    DEFAULT_OPT="-s -f ./Script/random.gol -t $TOTAL_ITERATION";
 
-for (( file = 0; file < ${#input[@]}; file++ )); do
-
-    TOTAL_ITERATION=$(( $RANDOM % 100 )) 
-    if [ $(( $TOTAL_ITERATION % 2 )) -ne 0 ]; then ((--TOTAL_ITERATION)); fi
-    if [ $TOTAL_ITERATION -eq 0 ]; then TOTAL_ITERATION=2; fi # We don't want 0 [cause it's infinit] 
-
-    DEFAULT_OPT="-s -f ./Famous_example/${input[$file]} -t $TOTAL_ITERATION"
-    DIFF_FILE="./Famous_example/${output[$file]}";
+    SIZE=$(( $i * $i ));
+    if ! [[ -z "${nbProcSpec[$SIZE]}" ]]; then
+        NBPROC=(${nbProcSpec[$SIZE]//,/ });
+    else
+        NBPROC=$(($i * $i));
+    fi
     
-    echo -e "--------------";
-    echo "Lets start for file : ${input[$file]} - Use : $TOTAL_ITERATION interation";
-    echo -e "--------------";
+    echo "[TEST] Start creating a random board [$SIZE x $SIZE]"
+    ./Script/createRandomBoard.sh $SIZE $SIZE true
+    echo "[TEST] End of creation"
+    echo "-----------------------"
     
-    echo -e "[TEST] Sequential : START";
-    
-    $PROG $DEFAULT_OPT > /dev/null
-    DIFF=$(diff output.gol $DIFF_FILE 2>&1)
-       
-    echo -n "[TEST] Sequential : ";
+    for (( j = 0; j < ${#NBPROC[@]}; j++ )); do
+        echo "[TEST] ${NBPROC[$j]} Processor - $TOTAL_ITERATION Iteration"
+        echo -n "[TEST] Row division test    : START .. "
+        mpirun -np ${NBPROC[$j]} $PROG $DEFAULT_OPT > /dev/null
+        mv output.gol compare.gol
+        echo -e "END";
 
-    diffOutput $DIFF;
-    AllSucces+=$([ $? -eq 0 ] && echo "." || echo "#")
+        echo -n "[TEST] Matrix division test : START .. "
+        mpirun -np ${NBPROC[$j]} $PROG $DEFAULT_OPT -m > /dev/null
+        DIFF=$(diff output.gol compare.gol 2>&1)
+        echo -e "END\n";
 
-    echo -e "\n--------------";
-    echo "Multi thread fined grained : ";
-    echo -e "--------------\n";
-
-    for (( j = 0; j < ${#thread[@]}; j++ )); do
-        
-        echo -e "[TEST] ${thread[$j]} thread fined grained : START";
-
-        $PROG $DEFAULT_OPT -p ${thread[$j]} -g > /dev/null
-        DIFF=$(diff output.gol $DIFF_FILE 2>&1)
-
-        echo -n "[TEST] ${thread[$j]} thread fined grained : ";
-
+        echo -n "[TEST] Compare output of the previous test : "
         diffOutput $DIFF;
         AllSucces+=$([ $? -eq 0 ] && echo "." || echo "#")
         
-        echo "";
-    done;
-
-    echo -e "--------------";
-    echo "Multi thread average grained: ";
-    echo -e "--------------\n";
-
-    for (( j = 0; j < ${#thread[@]}; j++ )); do
-        echo -e "[TEST] ${thread[$j]} thread average grained : START";
-
-        $PROG $DEFAULT_OPT -p ${thread[$j]} > /dev/null
-        DIFF=$(diff output.gol $DIFF_FILE 2>&1)
-        
-        echo -n "[TEST] ${thread[$j]} thread average grained : ";
-        
-        diffOutput $DIFF;
-        AllSucces+=$([ "$DIFF" == "" ] && echo "." || echo "#")
-
-        echo "";
-    done;
+        echo ""
+    done
 done
+rm compare.gol
 
 echo "";
 echo "[TEST] All Done : $AllSucces";
 
-rm output.gol

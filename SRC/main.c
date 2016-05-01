@@ -84,10 +84,11 @@ int main(int argc, char* argv[]) {
             QUIT_MSG("Grid could no be devided by the total number of process %d - %d\n", size_tick[1], total_proc);
         }
  
-        if ( my_id == 0 ) 
-            sendAllSubMatrice(g, slice_size, proc_slice);
-         
-        s = receivedMatrix(my_x, my_y, slice_size, proc_slice);
+        if ( my_id == 0 ) { 
+            s = sendAllSubMatrice(g, slice_size, proc_slice);
+        } else
+            s = receivedMatrix(my_x, my_y, slice_size, proc_slice);
+        
     } else {
         if ( my_id == 0 && size_tick[1] % total_proc != 0 )
             QUIT_MSG("Grid could no be devided by the total number of process\n");
@@ -103,7 +104,7 @@ int main(int argc, char* argv[]) {
                 size_tick[0] * slice_size, MPI_CHAR, 
                 0, MPI_COMM_WORLD);
     }
-
+    
     /********************/
     /*     Init end     */
     /* -----------------*/
@@ -118,7 +119,7 @@ int main(int argc, char* argv[]) {
     
     for ( ; size_tick[2] > 0; size_tick[2]--) {
        
-        if ( size_tick[3] == DIVIDE_MATRICE ) {
+        if ( size_tick[3] == DIVIDE_MATRICE ) { 
             shareMatrixBorder(s, my_x, my_y, slice_size, proc_slice);
             processMatrixGameTick(s, my_x, my_y, slice_size);
             gatherMatrix(g, s, my_x, my_y, slice_size, proc_slice, total_proc);
