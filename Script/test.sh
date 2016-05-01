@@ -1,11 +1,19 @@
 #!/bin/bash
 
+START=2
+END=50
+MAX_ITERATION=30
 readonly PROG="./BIN/GameOfLife"
+
+# This array enable to specify the number of processos to use for a specific board size
+# [9]="1,9" means that is the number of row equal 9, then test with 1 processus and then with 9
+NB_PROC_SPEC=( [9]="1, 9" [196]="1,4,196" [256]="4,16,32,64" [289]="144" [400]="100")
 
 function diffOutput {
     if [ "$1" != "" ]; then
         echo "FAIL";
         echo "$1";
+        exit 1;
         return 1;
     else 
         echo "SUCCESS";
@@ -13,7 +21,6 @@ function diffOutput {
     fi
 }
 
-AllSucces="";
 
 if ! [ -e $PROG ]; then
     echo "[TEST] Compilation : START"
@@ -27,77 +34,69 @@ if ! [ -e $PROG ]; then
     echo -e "[TEST] Compilation : SUCCESS\n";
 fi;
 
+if [ ! -z "$1" ]; then
+    TO_DO=$( echo "scale=0; sqrt($2)" | bc -l );
+    if [ $TO_DO -le $START ]; then
+        echo "$1 need to be > 2";
+    else
+        START=$TO_DO
+    fi
+fi;
+
+if [ ! -z "$2" ]; then
+    TO_DO=$( echo "scale=0; sqrt($2)" | bc -l );
+    if [ $TO_DO -gt $END ]; then
+        echo "The max is 2500";
+    else
+        END=$TO_DO;
+    fi
+fi
+
 echo -e "--------------\n";
 
-input=("block.gol" "blinker.gol" "beacon.gol" "empty.gol" "toad.gol")
 
-# If you use odd number of iteration those file WON'T work [cause all of them got a period of 2 
-output=("block.gol" "blinker.gol" "beacon.gol" "empty.gol" "toad.gol")
+AllSucces="";
+for (( i = $START; i <= $END; i++ )); do
+    SIZE=$(( $i * $i ));
+    TOTAL_ITERATION=$(( $RANDOM % $MAX_ITERATION + 1 )) 
 
-thread=(1 2 4 8 16)
+    DEFAULT_OPT="-s -f ./Script/random.gol -t $TOTAL_ITERATION"  
 
-for (( file = 0; file < ${#input[@]}; file++ )); do
+    if [ -z "${NB_PROC_SPEC[$SIZE]}" ]; then
+        NB_PROC=($SIZE);
+    else
+        NB_PROC=(${NB_PROC_SPEC[$SIZE]//,/ })
+    fi
 
-    TOTAL_ITERATION=$(( $RANDOM % 100 )) 
-    if [ $(( $TOTAL_ITERATION % 2 )) -ne 0 ]; then ((--TOTAL_ITERATION)); fi
-    if [ $TOTAL_ITERATION -eq 0 ]; then TOTAL_ITERATION=2; fi # We don't want 0 [cause it's infinit] 
+    echo "[TEST] Generate random board : [$SIZE x $SIZE]";
+    ./Script/createRandomBoard.sh $SIZE $SIZE true
+    echo -e "[TEST] Generation done\n";
 
-    DEFAULT_OPT="-s -f ./Famous_example/${input[$file]} -t $TOTAL_ITERATION"
-    DIFF_FILE="./Famous_example/${output[$file]}";
-    
-    echo -e "--------------";
-    echo "Lets start for file : ${input[$file]} - Use : $TOTAL_ITERATION interation";
-    echo -e "--------------";
-    
-    echo -e "[TEST] Sequential : START";
-    
-    $PROG $DEFAULT_OPT > /dev/null
-    DIFF=$(diff output.gol $DIFF_FILE 2>&1)
-       
-    echo -n "[TEST] Sequential : ";
 
-    diffOutput $DIFF;
-    AllSucces+=$([ $? -eq 0 ] && echo "." || echo "#")
+    for (( j = 0; j < ${#NB_PROC[@]}; j++ )); do
+        PROC=${NB_PROC[$j]};
+        echo "[TEST] ${PROC} processus - ${TOTAL_ITERATION} iteration";
 
-    echo -e "\n--------------";
-    echo "Multi thread fined grained : ";
-    echo -e "--------------\n";
+        echo -n "[TEST] Row division    : START .. ";
+        /usr/bin/mpirun -np $PROC $PROG $DEFAULT_OPT > /dev/null
+        mv output.gol compare.gol
+        echo -e "END";
 
-    for (( j = 0; j < ${#thread[@]}; j++ )); do
-        
-        echo -e "[TEST] ${thread[$j]} thread fined grained : START";
+        echo -n "[TEST] Matrix division : START .. ";
+        /usr/bin/mpirun -np $PROC $PROG $DEFAULT_OPT -m > /dev/null
+        DIFF=$(diff output.gol compare.gol 2>&1)
+        echo -e "END";
 
-        $PROG $DEFAULT_OPT -p ${thread[$j]} -g > /dev/null
-        DIFF=$(diff output.gol $DIFF_FILE 2>&1)
-
-        echo -n "[TEST] ${thread[$j]} thread fined grained : ";
-
+        echo -en "\n[TEST] Compare the two (2) version : ";
         diffOutput $DIFF;
+
         AllSucces+=$([ $? -eq 0 ] && echo "." || echo "#")
-        
-        echo "";
     done;
-
-    echo -e "--------------";
-    echo "Multi thread average grained: ";
     echo -e "--------------\n";
-
-    for (( j = 0; j < ${#thread[@]}; j++ )); do
-        echo -e "[TEST] ${thread[$j]} thread average grained : START";
-
-        $PROG $DEFAULT_OPT -p ${thread[$j]} > /dev/null
-        DIFF=$(diff output.gol $DIFF_FILE 2>&1)
-        
-        echo -n "[TEST] ${thread[$j]} thread average grained : ";
-        
-        diffOutput $DIFF;
-        AllSucces+=$([ "$DIFF" == "" ] && echo "." || echo "#")
-
-        echo "";
-    done;
+    sleep 0.4
 done
 
 echo "";
 echo "[TEST] All Done : $AllSucces";
 
-rm output.gol
+

@@ -7,8 +7,8 @@ INC_DIR = INC
 OBJ_DIR = OBJ
 BIN_DIR = BIN
 
-CC = gcc
-CFLAGS = -W -Wall -Wextra -O2 -lncursesw -lpthread -ansi 
+CC = mpicc
+CFLAGS = -W -Wall -Wextra -O2 -ansi -Wno-uninitialized -lm 
 
 # For glibc under glibc2.20 [_BSD_SOURCE] and higher [_DEFAULT_SOURCE]
 CFLAGS+=-D_DEFAULT_SOURCE -D_BSD_SOURCE
@@ -26,11 +26,6 @@ OBJ = $(addsuffix .o, $(basename $(subst ${SRC_DIR}, ${OBJ_DIR}, ${SRC})))
 .SUFFIXES:
 
 all: dir $(BIN_DIR)/$(BIN)
-
-TOTAL=10
-tests-rand: rebuild
-tests-rand:
-	./Script/test_random.sh $(TOTAL)
 
 tests: rebuild
 tests:

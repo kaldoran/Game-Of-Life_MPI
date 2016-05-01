@@ -1,0 +1,122 @@
+\documentclass[10pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{graphicx}
+\usepackage{fancyhdr}
+\usepackage{xcolor}
+\usepackage{enumerate}
+\usepackage{xparse}
+\usepackage[french]{babel}
+\usepackage[left=2cm,right=2cm,top=2cm,bottom=3cm]{geometry}
+\pagestyle{fancy}
+
+\NewDocumentCommand{\framecolorbox}{oommm}
+ {% #1 = width (optional)
+  % #2 = inner alignment (optional)
+  % #3 = frame color
+  % #4 = background color
+  % #5 = text
+  \IfValueTF{#1}
+   {%
+    \IfValueTF{#2}
+     {\fcolorbox{#3}{#4}{\makebox[#1][#2]{#5}}}
+     {\fcolorbox{#3}{#4}{\makebox[#1]{#5}}}%
+   }
+   {\fcolorbox{#3}{#4}{#5}}%
+ }
+
+\renewcommand{\headrulewidth}{1pt}
+\fancyhead[C]{} 
+\fancyhead[L]{INF7235 - Devoir \#2}
+\fancyhead[R]{Reynaud Nicolas}
+
+\renewcommand{\footrulewidth}{1pt}
+\fancyfoot[C]{\LaTeX} 
+\fancyfoot[L]{\small\hspace{15pt}\emph{Imprimé le : \today}}
+\fancyfoot[R]{Page \thepage}
+
+\begin{document}
+
+\section{Description du problème}
+
+\indent Le problème que j'ai choisi est le jeu de la vie. Dans ce dernier, l'élément à paralléliser parait assez évidant. \\
+En effet, dans ce jeu le principe est de partir d'une grille de N x M (N $>$ 0 \& M $>$ 0), dans laquelle les cellules peuvent se trouver seulement dans deux états. Une cellule est, soit morte, soit vivante. 
+Le principe du jeu est alors, à partir de cette grille et d'une série de règle très simple, de calculer la grille suivante. 
+Le jeu de la vie n'a pas de but, il s'agit uniquement de faire évoluer un automate cellulaire au cours du temps.\\
+
+Les règles se bases sur un calcule en fonction du nombre de voisin d'une cellule; ainsi une cellule ayant 3 cellules vivante à coté d'elle sera vivante à l'étape d'après, une cellule ayant moins de 2 cellules en vie ou plus de 3 en vie à coté d'elle mourra, et enfin une cellule ayant exactement 2 cellules vivante à côté d'elle restera dans le même état. Ainsi à partir de ces règles il nous faut calculer la grille suivante. \\
+
+Ainsi en suivant ces règles la grille suivante n'a pas d'interdépendance lors de son calcule (nous n'avons pas besoin de savoir quoi que ce soit de la seconde grille pour la calculer). Ainsi la parallélisation parait assez évidente. Il suffit de demander à chaque threads de calculer une partie de la grille. \\
+
+\underline{A noter} : La tâche de base étant assez complexe, j'ai pris le choix de prendre UNIQUEMENT des grilles de N * N dans le cas de la division en sous-matrice. Il faut également que la matrice de N x N soit divisible en P sous matrices de tailles identiques, ou P est le nombre de processus.\\
+Dans le cas de la division en ligne, des matrices de N x M sont prise cependant il faut OBLIGATOIREMENT que la division de M par le nombre de processus P retourne un entier. \\
+\section{Les approches}
+Comme demandé deux (2) approches ont été fait. \\
+
+La première est la division en blocs de lignes, cette division est fait avec l'aide de la fonction MPI\_Scatter. \\
+Une fois que chaque processus à reçu sa partie de grille à traiter, ils commencent alors à s'échanger entre eux les bordures dont ils vont avoir besoin pour calculer leurs morceaux de grille. \\
+En effet, par exemple le processus 1 à besoin de la partie de matrice supérieur contenu dans le processus 0 mais également de la partie en dessus contenue dans le processus 2. \\
+De même le processus 0 à besoin de la partie basse de la matrice contenu dans le processus 1. \\
+
+Ainsi un petit processus d'échange est effectuer pour que chaque processus puisse calculer la matrice de sortie sans soucis, une fois cette opération est fait, chaque processus renvoi sa matrice de sortir au processus 0 qui se chargera de tout re-assembler puis l'afficher si besoin. \\
+
+La seconde méthode est la division en sous-matrice, cette méthode m'a donnée beaucoup de mal. \\
+Le principe est le suivant : \\
+\begin{enumerate}[(1)]
+  \item Le processus 0 lit la matrice d'entrée ou la généré.
+  \item Le processus 0 envoi aux autres processus les informations dont ils auront besoin ( par exemple le nombre d'itération, la taille de la grille ...)
+  \item Le processus 0 divise la matrice puis envoi chaque partie aux autres processus. Il s'envoi également une partie à traiter.
+  \item Chaque processus s'échange les bordures dont ils vont avoir besoin pour le calcule. \\
+  Il faut donc envoyer les côtés aux matrices gauches et droites ( si elles existent ) puis les partie hautes et basses aux matrices au dessus et en dessous ( si elles existent ), et enfin les coins aux matrices en diagonales. (encore une fois si elles existent ).
+  \item Une fois tout ces échange fait, chaque processus calcule sa matrice de sortie.
+  \item Enfin, chaque processus renvoi leurs matrices modifié au processus 0.
+  \item Si il reste des itérations à faire ont recommence à l'étape 4.
+\end{enumerate}
+
+\section{Les tests}
+Pour les stratégies de tests j'ai deux stratégies différente, la première avec \framecolorbox[1.7cm]{white}{black!20}{make tests} permet de lancer des tests avec des grilles prédéfinies, grilles dont les résultats sont connu en avance, il s'agit principalement de grille qui n'évoluent pas ou peu au cours du temps. \\
+
+Ainsi chaque tests se compose de la façon suivante : 
+\begin{itemize}
+    \item Prendre un des tests de la liste.
+    \item Calculer la grille de fin et la sauvegarder dans un fichier.
+    \item Comparer la grille générée à celle qui était prévue.
+    \item Indiquer si un problème ou non à survenu.
+    \item Si un problème à survenue indiquer les différences entre les deux (2) grilles.
+\end{itemize}
+
+\hfill \break
+La seconde stratégie de test, est lancée avec la commande \framecolorbox[2.5cm]{white}{black!20}{make tests-rand}. \\
+
+Lors de ces tests une grille est générée aléatoirement (de taille N x N), ensuite cette grille évolue un nombre Y de fois; avec 0 $<$ Y $<$ 100, la valeur 100 est une valeur fixée par la constante MAX\_ITERATION du fichier ./Script/test\_random.sh. \\
+La taille de N est choisie en fonction de la condition sité plus haut. [pouvoir diviser la matrice N x N en P sous matrices]. \\
+
+Les itérations sont alors lancée avec les deux (2) versions du programme, une première fois avec une division sous forme de blocs de ligne, puis une seconde fois avec la division en sous matrice. \\
+
+Les deux (2) sorties sont alors comparé à la suite des Y itérations, si une différence est trouvée celle ci est montrée.\\
+
+\underline{A noter : } A la fin des programmes de tests une chaine de caractère est affichée sous la forme : ".\#...." par exemple, ou "." signifie qu'un test est passé avec succès, "\#" signifiant que le tests à échoué. Ainsi ici le tests deux (2) aurait échoué.
+
+\section{Résultats expérimentaux}
+
+Les résultats expérimentaux pour les valeurs suivantes : 10, 50, 100, 500, 1000 \& 2000. \\
+\begin{figure}[h]
+  \centering
+  \begin{minipage}[b]{0.49\textwidth}
+	\includegraphics[width=\textwidth]{}
+    \caption{Temps d'exécution pour une grille de 10 x 10}
+  \end{minipage}
+  \hfill
+  \begin{minipage}[b]{0.49\textwidth}
+    \includegraphics[width=\textwidth]{}
+    \caption{Accélération absolue pour une grille de 10 x 10}
+  \end{minipage}
+\end{figure}
+
+\section{Conclusion}
+
+\section{Difficultés}
+
+\end{document}
