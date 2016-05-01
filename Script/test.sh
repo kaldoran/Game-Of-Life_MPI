@@ -50,7 +50,7 @@ echo -e "--------------\n";
 
 # This array enable to specify the number of processos to use for a specific board size
 # [9]="1,9" means that is the number of row equal 9, then test with 1 processus and then with 9
-NB_PROC_SPEC=( [9]="1, 9" )
+NB_PROC_SPEC=( [9]="1, 9" [196]="1,4,49" [256]="4,16,32,64" [289]="144" [400]="25,100")
 
 AllSucces="";
 
