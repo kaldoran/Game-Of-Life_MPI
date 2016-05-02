@@ -16,6 +16,9 @@ if [ ! -d $PATH_SEQ ]; then
     echo ""
     if [[ $REPLY =~ ^[Yy]$ ]]; then
         git clone https://github.com/kaldoran/Conway-s_Game-Of-Life $PATH_SEQ
+    else
+        echo "This version is needed for test"
+        exit 0;
     fi
     echo "The version had been download here : $PATH_SEQ";
 fi
