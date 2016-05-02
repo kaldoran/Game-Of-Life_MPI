@@ -1,19 +1,18 @@
 #!/bin/bash
 
 START=2
-END=50
+END=20
 MAX_ITERATION=30
 readonly PROG="./BIN/GameOfLife"
 
 # This array enable to specify the number of processos to use for a specific board size
 # [9]="1,9" means that is the number of row equal 9, then test with 1 processus and then with 9
-NB_PROC_SPEC=( [9]="1, 9" [196]="1,4,196" [256]="4,16,64" [289]="144" [400]="100")
+NB_PROC_SPEC=( [9]="1, 9" [196]="1,4,196" [256]="4,16,64" [324]="4" [400]="100")
 
 function diffOutput {
     if [ "$1" != "" ]; then
         echo "FAIL";
         echo "$1";
-        exit 1;
         return 1;
     else 
         echo "SUCCESS";
