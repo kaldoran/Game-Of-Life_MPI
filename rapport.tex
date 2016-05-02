@@ -39,6 +39,17 @@
 
 \begin{document}
 
+\begin{center}
+\begin{large}
+\underline{Devoir \#2} - MPI - Jeu de la Vie \\
+\vspace{0.25cm}
+\begin{footnotesize}
+Division par lignes Ou par sous-matrices \\
+\end{footnotesize}
+\noindent\rule{4cm}{0.4pt}
+\end{large}
+\end{center}
+
 \section{Description du problème}
 
 \indent Le problème que j'ai choisi est le jeu de la vie. Dans ce dernier, l'élément à paralléliser parait assez évidant. \\
@@ -76,7 +87,13 @@ Le principe est le suivant : \\
 \end{enumerate}
 
 \section{Les tests}
-Pour lancer les tests vous pouvez utiliser la commande \framecolorbox[1.7cm]{white}{black!20}{make tests}. D'un autre côté, il est possible de lancer le script avec la commande  \framecolorbox[1.7cm]{white}{black!20}{./Script/test.sh X Y} ou X et Y présentent les bornes de début et de fin pour la taille de la grille. \\
+
+\begin{verbatim}
+ORTE_ERROR_LOG: The system limit on number of pipes a process can open 
+was reached in file odls_default_module.c at line 895
+\end{verbatim}
+
+Pour lancer les tests vous pouvez utiliser la commande \framecolorbox[1.7cm]{white}{black!20}{make tests}. D'un autre côté, il est possible de lancer le script avec la commande  \framecolorbox[3.7cm]{white}{black!20}{./Script/test.sh X Y} ou X et Y présentent les bornes de début et de fin pour la taille de la grille. \\
 Par exemple, si X = 196 et Y = 200, seules les grilles ayant une largeur comprises entre 196 et 200 seront fait. \\
 
 Chose particulière de se script est le fait que, de base, les tests sont lancé avec un nombre de processus égal à la taille de la largeur de la grille.\\
@@ -162,6 +179,8 @@ Il est important de noter que les valeurs fournies pour un (1) processeur avec l
     \caption{Accélération absolue pour une grille de 1088 x 1088}
   \end{minipage}
 \end{figure}
+
+\newpage
 \section{Conclusion}
 On peut aisement remarquer que la version avec une division par matrice n'est pas forcement une bonne option. En effet, le nombre de message à échanger est énorme comparer à une division par lignes.\\
 Qui plus est, la division par lignes utilise uniquement les méthodes MPI\_Scatter et MPI\_Gather, ces méthodes sont certainement énormément plus optimisées que les Send et Recv que j'utilise pour partager les bords des matrices.\\

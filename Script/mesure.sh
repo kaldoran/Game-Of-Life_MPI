@@ -123,3 +123,4 @@ for (( i = 0; i < ${#GRID_SIZE[@]}; i++)); do
 	EOF
 done
 
+rm ./Script/random.gol 2> /dev/null
