@@ -1,0 +1,8 @@
+OBJ
+BIN
+*.gol
+*.log
+*.aux
+*.synctex.gz
+*.swp
+
