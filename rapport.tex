@@ -48,7 +48,7 @@ Le jeu de la vie n'a pas de but, il s'agit uniquement de faire évoluer un autom
 
 Les règles se bases sur un calcule en fonction du nombre de voisin d'une cellule; ainsi une cellule ayant 3 cellules vivante à coté d'elle sera vivante à l'étape d'après, une cellule ayant moins de 2 cellules en vie ou plus de 3 en vie à coté d'elle mourra, et enfin une cellule ayant exactement 2 cellules vivante à côté d'elle restera dans le même état. Ainsi à partir de ces règles il nous faut calculer la grille suivante. \\
 
-Ainsi en suivant ces règles la grille suivante n'a pas d'interdépendance lors de son calcule (nous n'avons pas besoin de savoir quoi que ce soit de la seconde grille pour la calculer). Ainsi la parallélisation parait assez évidente. Il suffit de demander à chaque threads de calculer une partie de la grille. \\
+Ainsi en suivant ces règles la grille suivante n'a pas d'interdépendance lors de son calcule (nous n'avons pas besoin de savoir quoi que ce soit de la seconde grille pour la calculer). Ainsi la parallélisation parait assez évidente. Il suffit de demander à chaque processus de calculer une partie de la grille. \\
 
 \underline{A noter} : La tâche de base étant assez complexe, j'ai pris le choix de prendre UNIQUEMENT des grilles de N * N dans le cas de la division en sous-matrice. Il faut également que la matrice de N x N soit divisible en P sous matrices de tailles identiques, ou P est le nombre de processus.\\
 Dans le cas de la division en ligne, des matrices de N x M sont prise cependant il faut OBLIGATOIREMENT que la division de M par le nombre de processus P retourne un entier. \\
@@ -76,47 +76,102 @@ Le principe est le suivant : \\
 \end{enumerate}
 
 \section{Les tests}
-Pour les stratégies de tests j'ai deux stratégies différente, la première avec \framecolorbox[1.7cm]{white}{black!20}{make tests} permet de lancer des tests avec des grilles prédéfinies, grilles dont les résultats sont connu en avance, il s'agit principalement de grille qui n'évoluent pas ou peu au cours du temps. \\
+Pour lancer les tests vous pouvez utiliser la commande \framecolorbox[1.7cm]{white}{black!20}{make tests}. D'un autre côté, il est possible de lancer le script avec la commande  \framecolorbox[1.7cm]{white}{black!20}{./Script/test.sh X Y} ou X et Y présentent les bornes de début et de fin pour la taille de la grille. \\
+Par exemple, si X = 196 et Y = 200, seules les grilles ayant une largeur comprises entre 196 et 200 seront fait. \\
 
-Ainsi chaque tests se compose de la façon suivante : 
-\begin{itemize}
-    \item Prendre un des tests de la liste.
-    \item Calculer la grille de fin et la sauvegarder dans un fichier.
-    \item Comparer la grille générée à celle qui était prévue.
-    \item Indiquer si un problème ou non à survenu.
-    \item Si un problème à survenue indiquer les différences entre les deux (2) grilles.
-\end{itemize}
+Chose particulière de se script est le fait que, de base, les tests sont lancé avec un nombre de processus égal à la taille de la largeur de la grille.\\
+Il est ensuite possible de personnaliser le nombre de processus à tester à l'aide de la ligne 10 du fichier ./Script/test.sh. Le tableau NB\_PROC\_SPEC permet alors, pour une largeur de grille donnée, de définir le nombre de processus à tester.\\
+Par exemple, [9]="1,9", signifie que si la largeur de grille est de neuf (9), alors il faudra lancer le programme une fois avec un (1) processus, puis une fois avec neuf (9). \\
+Cette méthode me permet alors de lancer une infinité de taille de grille tout en ayant une personnalisation possible sur les tests à faire afin de montrer que le programme fonctionne bien avec un nombre de processus différent de la largeur de la grille. \\
 
-\hfill \break
-La seconde stratégie de test, est lancée avec la commande \framecolorbox[2.5cm]{white}{black!20}{make tests-rand}. \\
+Le test se déroule de la façon suivante : \\
+\indent - Les itérations sont des deux (2) versions du programme sont lancée, une première fois avec une division sous forme de blocs de ligne, puis une seconde fois avec la division en sous matrice. \\
+\indent - Les deux (2) sorties sont alors comparé à la suite des Y itérations, si une différence est trouvée celle ci est montrée.\\
 
-Lors de ces tests une grille est générée aléatoirement (de taille N x N), ensuite cette grille évolue un nombre Y de fois; avec 0 $<$ Y $<$ 100, la valeur 100 est une valeur fixée par la constante MAX\_ITERATION du fichier ./Script/test\_random.sh. \\
-La taille de N est choisie en fonction de la condition sité plus haut. [pouvoir diviser la matrice N x N en P sous matrices]. \\
-
-Les itérations sont alors lancée avec les deux (2) versions du programme, une première fois avec une division sous forme de blocs de ligne, puis une seconde fois avec la division en sous matrice. \\
-
-Les deux (2) sorties sont alors comparé à la suite des Y itérations, si une différence est trouvée celle ci est montrée.\\
+Il est important de remarquer que j'ai une limite par rapport aux tests, j'ai pu remarqué que au delà d'une grille de plus de 400 de large ( environs ) la méthode de division en sous matrice ne fonctionne pas [ il ne se termine pas ], alors que en ligne de commande classique ( hors du terminale ) celui ci finis. Je soupçonne un soucis avec les "ulimits". \\
 
 \underline{A noter : } A la fin des programmes de tests une chaine de caractère est affichée sous la forme : ".\#...." par exemple, ou "." signifie qu'un test est passé avec succès, "\#" signifiant que le tests à échoué. Ainsi ici le tests deux (2) aurait échoué.
 
 \section{Résultats expérimentaux}
 
-Les résultats expérimentaux pour les valeurs suivantes : 10, 50, 100, 500, 1000 \& 2000. \\
+Les résultats expérimentaux pour les valeurs suivantes : 64, 192, 320, 512, 1088. \\
+
+Il est important de noter que les valeurs fournies pour un (1) processeur avec les grilles de tailles 512 \& 1088 sont fausses. Elles on été mise à 0 pour éviter les soucis, cependant elles sont bien entendu non réelles. Elles sont fixées à cause du problème cité plus haut.\\
+
 \begin{figure}[h]
   \centering
   \begin{minipage}[b]{0.49\textwidth}
-	\includegraphics[width=\textwidth]{}
-    \caption{Temps d'exécution pour une grille de 10 x 10}
+	\includegraphics[width=\textwidth]{./Time/size_64_time.png}
+    \caption{Temps d'exécution pour une grille de 64 x 64}
   \end{minipage}
   \hfill
   \begin{minipage}[b]{0.49\textwidth}
-    \includegraphics[width=\textwidth]{}
-    \caption{Accélération absolue pour une grille de 10 x 10}
+    \includegraphics[width=\textwidth]{./Time/size_64_acceleration.png}
+    \caption{Accélération absolue pour une grille de 64 x 64}
   \end{minipage}
 \end{figure}
 
+\begin{figure}[h]
+  \centering
+  \begin{minipage}[b]{0.49\textwidth}
+	\includegraphics[width=\textwidth]{./Time/size_192_time.png}
+    \caption{Temps d'exécution pour une grille de 192 x 192}
+  \end{minipage}
+  \hfill
+  \begin{minipage}[b]{0.49\textwidth}
+    \includegraphics[width=\textwidth]{./Time/size_192_acceleration.png}
+    \caption{Accélération absolue pour une grille de 192 x 192}
+  \end{minipage}
+\end{figure}
+
+\begin{figure}[h]
+  \centering
+  \begin{minipage}[b]{0.49\textwidth}
+	\includegraphics[width=\textwidth]{./Time/size_320_time.png}
+    \caption{Temps d'exécution pour une grille de 320 x 320}
+  \end{minipage}
+  \hfill
+  \begin{minipage}[b]{0.49\textwidth}
+    \includegraphics[width=\textwidth]{./Time/size_320_acceleration.png}
+    \caption{Accélération absolue pour une grille de 320 x 320}
+  \end{minipage}
+\end{figure}
+
+\begin{figure}[h]
+  \centering
+  \begin{minipage}[b]{0.49\textwidth}
+	\includegraphics[width=\textwidth]{./Time/size_512_time.png}
+    \caption{Temps d'exécution pour une grille de 512 x 512}
+  \end{minipage}
+  \hfill
+  \begin{minipage}[b]{0.49\textwidth}
+    \includegraphics[width=\textwidth]{./Time/size_64_acceleration.png}
+    \caption{Accélération absolue pour une grille de 64 x 64}
+  \end{minipage}
+\end{figure}
+
+\begin{figure}[h]
+  \centering
+  \begin{minipage}[b]{0.49\textwidth}
+	\includegraphics[width=\textwidth]{./Time/size_1088_time.png}
+    \caption{Temps d'exécution pour une grille de 1088 x 1088}
+  \end{minipage}
+  \hfill
+  \begin{minipage}[b]{0.49\textwidth}
+    \includegraphics[width=\textwidth]{./Time/size_1088_acceleration.png}
+    \caption{Accélération absolue pour une grille de 1088 x 1088}
+  \end{minipage}
+\end{figure}
 \section{Conclusion}
+On peut aisement remarquer que la version avec une division par matrice n'est pas forcement une bonne option. En effet, le nombre de message à échanger est énorme comparer à une division par lignes.\\
+Qui plus est, la division par lignes utilise uniquement les méthodes MPI\_Scatter et MPI\_Gather, ces méthodes sont certainement énormément plus optimisées que les Send et Recv que j'utilise pour partager les bords des matrices.\\
+Le nombre d'échange de message pour une sous matrice est énorme, par exemple si on considère la zone de sous-matrice qui ont le plus d'échange à faire, à savoir celles du milieu, on se retrouve avec 8 échanges à faire pour chacune de ces sous-matrices. Ce qui est assez conséquent quand ont arrive à une divisions avec une centaines de sous grilles.\\
+
+En somme, le nombre trop grand de message à échanger et la sous-optimisation ou la non optimisation de mes méthodes d'échange de bordures des matrices ( et je ne pense pas que ceci soit optimisable) fait que l'on se retrouve avec tonnes de messages échangé qui au final ralentissent le programme et le rendent sous performant par rapport à la version avec la division en lignes. \\
 
 \section{Difficultés}
+J'ai une de très grosses difficultés avec la division en sous-matrice, la quantité de message à prévoir m'a dépassé, échanger les angles, puis le haut, le bas ...\\
+La division en sous-matrice à été pour moi une réelle difficultés, savoir à quel processus envoyer le message, quelle partie de la matrice envoyé etc ..\\
+qui plus est au départ je n'avais pas pensé à envoyer les angles ce qui à donc ensuite rajouter 4 opérations de plus, qui ont alors ralenti encore plus le programme.
 
 \end{document}

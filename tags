@@ -1,0 +1,85 @@
+!_TAG_FILE_FORMAT	2	/extended format; --format=1 will not append ;" to lines/
+!_TAG_FILE_SORTED	1	/0=unsorted, 1=sorted, 2=foldcase/
+!_TAG_PROGRAM_AUTHOR	Darren Hiebert	/dhiebert@users.sourceforge.net/
+!_TAG_PROGRAM_NAME	Exuberant Ctags	//
+!_TAG_PROGRAM_URL	http://ctags.sourceforge.net	/official site/
+!_TAG_PROGRAM_VERSION	5.8	//
+ALIVE_CELL	INC/game.h	41;"	d
+BIN	Makefile	/^BIN = GameOfLife$/;"	m
+BIN_DIR	Makefile	/^BIN_DIR = BIN$/;"	m
+CC	Makefile	/^CC = mpicc$/;"	m
+CFLAGS	Makefile	/^CFLAGS = -W -Wall -Wextra -O2 -ansi -Wno-uninitialized -lm $/;"	m
+DEAD_CELL	INC/game.h	40;"	d
+DEBUG	Makefile	/^DEBUG=no$/;"	m
+DEBUG_MSG	INC/error.h	39;"	d
+DEBUG_MSG	INC/error.h	44;"	d
+DIVIDE_MATRICE	INC/game.h	45;"	d
+DIVIDE_ROWS	INC/game.h	44;"	d
+Description du probl me	rapport.tex	/^\\begin{document}$/;"	s
+ERROR_H	INC/error.h	27;"	d
+GAME_H	INC/game.h	26;"	d
+GAME_STRUCT_H	INC/game_struct.h	27;"	d
+Game	INC/game_struct.h	/^} Game;$/;"	t	typeref:struct:__anon1
+INC_DIR	Makefile	/^INC_DIR = INC$/;"	m
+Les approches	rapport.tex	/^Dans le cas de la division en ligne, des matrices de N x M sont prise cependant il faut OBLIGATOIREMENT que la division de M par le nombre de processus P retourne un entier. \\\\$/;"	s
+Les tests	rapport.tex	/^\\end{enumerate}$/;"	s
+MATRIX_H	INC/matrix.h	26;"	d
+MAX	INC/option.h	37;"	d
+MEMORY_H	INC/memory.h	27;"	d
+MIN_COLS_SIZE	INC/game.h	35;"	d
+MIN_ROWS_SIZE	INC/game.h	36;"	d
+NEW_ALLOC	INC/memory.h	36;"	d
+NEW_ALLOC_K	INC/memory.h	44;"	d
+OBJ	Makefile	/^OBJ = $(addsuffix .o, $(basename $(subst ${SRC_DIR}, ${OBJ_DIR}, ${SRC})))$/;"	m
+OBJ_DIR	Makefile	/^OBJ_DIR = OBJ$/;"	m
+OPT	INC/option.h	27;"	d
+OPTION_STRUCT	INC/option_struct.h	26;"	d
+OPT_LIST	INC/option.h	32;"	d
+Option	INC/option_struct.h	/^typedef struct Option {$/;"	s
+Option	INC/option_struct.h	/^} Option;$/;"	t	typeref:struct:Option
+POS	INC/game.h	55;"	d
+POURCENT_BEEN_ALIVE	INC/game.h	38;"	d
+QUIT_MSG	INC/error.h	52;"	d
+R sultats exp rimentaux	rapport.tex	/^\\underline{A noter : } A la fin des programmes de tests une chaine de caractère est affichée sous la forme : ".\\#...." par exemple, ou "." signifie qu'un test est passé avec succès, "\\#" signifiant que le tests à échoué. Ainsi ici le tests deux (2) aurait échoué.$/;"	s
+ROWS_H	INC/rows.h	25;"	d
+SRC	Makefile	/^SRC = $(foreach dir, $(SRC_DIR), $(wildcard $(dir)\/*.c))$/;"	m
+SRC_DIR	Makefile	/^SRC_DIR = SRC$/;"	m
+TOTAL	Makefile	/^TOTAL=10$/;"	m
+__gamePrint	SRC/game.c	/^void __gamePrint (Game* g) {$/;"	f
+__memAlloc	SRC/memory.c	/^void *__memAlloc(int total, size_t object_size) {$/;"	f
+__mergeMatrix	SRC/matrix.c	/^void __mergeMatrix(Game *src, Game *dest, int startx, int starty) {$/;"	f
+__neighbourCell	SRC/game.c	/^int __neighbourCell(unsigned int x, unsigned int y, Game *g) {$/;"	f
+__newBoard	SRC/game.c	/^char* __newBoard(unsigned int rows, unsigned int cols) {$/;"	f
+__offset	SRC/rows.c	/^char *__offset(char *s, int offset) {$/;"	f
+__posBufferRecv	SRC/rows.c	/^char *__posBufferRecv(int my_id, char* s, int offset) {$/;"	f
+__position	SRC/game.c	/^int __position(unsigned int x, unsigned int y, Game* g) {$/;"	f
+__printLine	SRC/game.c	/^void __printLine(Game* g) {$/;"	f
+__process	SRC/game.c	/^char __process(unsigned int x, unsigned int y, Game* g) {$/;"	f
+__setDefaultValue	SRC/option.c	/^Option __setDefaultValue() {$/;"	f
+__subMatrix	SRC/matrix.c	/^Game *__subMatrix(Game *src, int startx, int starty, int xslice_size, int yslice_size) {$/;"	f
+board	INC/game_struct.h	/^    char *board; \/* The board as an array of 0's and 1's. *\/$/;"	m	struct:__anon1
+cols	INC/game_struct.h	/^    unsigned int cols;   \/* The number of columns. *\/$/;"	m	struct:__anon1
+cols	INC/option_struct.h	/^    unsigned int cols;        \/* Number of columns to generate          - Default : Random *\/$/;"	m	struct:Option
+diffOutput	Script/test.sh	/^function diffOutput {$/;"	f
+file_path	INC/option_struct.h	/^    char* file_path;          \/* Path to the file to load               - Default : "" *\/$/;"	m	struct:Option
+freeGame	SRC/game.c	/^void freeGame(Game* g)  {$/;"	f
+gamePrintInfo	SRC/game.c	/^void gamePrintInfo(Game* g, int tick_left) {$/;"	f
+gatherMatrix	SRC/matrix.c	/^void gatherMatrix(Game *g, Game *s, int my_x, int my_y, int slice_size, int proc_slice, int total_proc) {$/;"	f
+generateRandomBoard	SRC/game.c	/^Game* generateRandomBoard(Option o) {$/;"	f
+getOption	SRC/option.c	/^Option getOption(int argc, char **argv) {$/;"	f
+loadBoard	SRC/game.c	/^Game* loadBoard(char* name) { $/;"	f
+main	SRC/main.c	/^int main(int argc, char* argv[]) {$/;"	f
+max_tick	INC/option_struct.h	/^    int max_tick;             \/* How much tick we need to do            - Default : 100 *\/$/;"	m	struct:Option
+method	INC/option_struct.h	/^    int method;               \/* Divide by grid or by rows              - Default : DIVIDE_GRID *\/$/;"	m	struct:Option
+newGame	SRC/game.c	/^Game* newGame(unsigned int rows, unsigned int cols) {$/;"	f
+processMatrixGameTick	SRC/game.c	/^void processMatrixGameTick(Game *g, int my_x, int my_y, int slice_size) {$/;"	f
+processRowsGameTick	SRC/game.c	/^void processRowsGameTick(Game *g) {$/;"	f
+receivedMatrix	SRC/matrix.c	/^Game* receivedMatrix(int my_x, int my_y, int slice_size, int proc_slice) {$/;"	f
+rows	INC/game_struct.h	/^    unsigned int rows;   \/* The number of rows. *\/$/;"	m	struct:__anon1
+rows	INC/option_struct.h	/^    unsigned int rows;        \/* Number of rows to generate             - Default : Random *\/$/;"	m	struct:Option
+saveBoard	SRC/game.c	/^bool saveBoard(Game *g) {$/;"	f
+save_file	INC/option_struct.h	/^    bool save_file;           \/* Do we need to save the last grid ?     - Default : false *\/$/;"	m	struct:Option
+sendAllSubMatrice	SRC/matrix.c	/^void sendAllSubMatrice(Game *g, int slice_size, int proc_slice) {$/;"	f
+shareGetBorder	SRC/rows.c	/^void shareGetBorder(Game *s, int slice_size, int my_id, int total_proc) {$/;"	f
+shareMatrixBorder	SRC/matrix.c	/^void shareMatrixBorder(Game *s, int my_x, int my_y, int slice_size, int proc_slice ) {$/;"	f
+usage	SRC/option.c	/^void usage(char* name) {$/;"	f

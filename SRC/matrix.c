@@ -54,14 +54,13 @@ void shareMatrixBorder(Game *s, int my_x, int my_y, int slice_size, int proc_sli
     buf = newGame(1, slice_size);
    
     my_id = my_y + my_x * proc_slice;
-    
     /* Send Right - Left*/
     if ( my_y != proc_slice - 1) { /* Send right column */
         tmp = __subMatrix(s, (my_x != 0), slice_size - (my_y == 0), slice_size, 1);
         MPI_Send(tmp->board, tmp->rows * tmp->cols, MPI_CHAR, my_id + 1, 0, MPI_COMM_WORLD);
         freeGame(tmp);
     }
-
+    
     if ( my_y != 0 ) { /* get right column and send our left */
         MPI_Recv(buf->board, buf->cols * buf->rows, MPI_CHAR, my_id - 1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
         tmp = __subMatrix(s, (my_x != 0), 1, slice_size, 1); /* Start at 1 due to buffer */
@@ -103,7 +102,7 @@ void shareMatrixBorder(Game *s, int my_x, int my_y, int slice_size, int proc_sli
 
     /* Diagonales */
     if ( my_y != 0 && my_x != 0 ) /* Send to top left */
-        MPI_Send(&s->board[POS(1, (my_y != 0), s)], 1, MPI_CHAR, my_id - proc_slice - 1, 0, MPI_COMM_WORLD);
+        MPI_Send(&s->board[POS(1, 1, s)], 1, MPI_CHAR, my_id - proc_slice - 1, 0, MPI_COMM_WORLD);
     
 
     if ( my_y != proc_slice - 1 && my_x != proc_slice - 1) { /* Send to bottom right */
@@ -129,7 +128,7 @@ void shareMatrixBorder(Game *s, int my_x, int my_y, int slice_size, int proc_sli
         MPI_Recv(&s->board[POS(slice_size + (my_x != 0) ,0, s)], 1, MPI_CHAR, 
                  my_id + proc_slice - 1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 
-        MPI_Send(&s->board[POS(proc_slice - (my_x == 0),1, s)], 1, MPI_CHAR, my_id + proc_slice - 1, 0, MPI_COMM_WORLD);
+        MPI_Send(&s->board[POS(slice_size - (my_x == 0),1, s)], 1, MPI_CHAR, my_id + proc_slice - 1, 0, MPI_COMM_WORLD);
     }
 
     if ( my_y != proc_slice - 1 && my_x != 0 ) {
@@ -142,17 +141,22 @@ void shareMatrixBorder(Game *s, int my_x, int my_y, int slice_size, int proc_sli
 
 void gatherMatrix(Game *g, Game *s, int my_x, int my_y, int slice_size, int proc_slice, int total_proc) {
     Game* tmp = NULL;
-    
-    tmp = __subMatrix(s, (my_x != 0), (my_y != 0), slice_size, slice_size);
-    MPI_Send(tmp->board, tmp->rows * tmp->cols, MPI_CHAR, 0, 0, MPI_COMM_WORLD);
-    freeGame(tmp);
-
-    if ( my_x == 0 && my_y == 0 ) {
+   
+    if ( my_x != 0 || my_y != 0 ) {
+        tmp = __subMatrix(s, (my_x != 0), (my_y != 0), slice_size, slice_size);
+        MPI_Send(tmp->board, tmp->rows * tmp->cols, MPI_CHAR, 0, 0, MPI_COMM_WORLD);
+        freeGame(tmp);
+    } else {
         int total_recv;
         MPI_Status status;
 
+        /* First merge matrix of process 0 */
+        tmp = __subMatrix(s, 0, 0, slice_size, slice_size);
+        __mergeMatrix(tmp, g, 0, 0);
+        freeGame(tmp);
+        
         tmp = newGame(slice_size, slice_size); 
-        for ( total_recv = 0; total_recv < total_proc; total_recv++ ) {
+        for ( total_recv = 1; total_recv < total_proc; total_recv++ ) {
             MPI_Recv(tmp->board, tmp->rows * tmp->cols, MPI_CHAR, MPI_ANY_SOURCE, 0, MPI_COMM_WORLD, &status);
             __mergeMatrix(tmp, g, 
                     (status.MPI_SOURCE / proc_slice) * slice_size, 
@@ -161,17 +165,19 @@ void gatherMatrix(Game *g, Game *s, int my_x, int my_y, int slice_size, int proc
         
         freeGame(tmp);
     }
+
+
     /* Nobody will go out since process 0 end recv */
     MPI_Barrier(MPI_COMM_WORLD);
 }
  
-void sendAllSubMatrice(Game *g, int slice_size, int proc_slice) {
-    Game *tmp = NULL;
+Game* sendAllSubMatrice(Game *g, int slice_size, int proc_slice) {
+    Game *tmp = NULL, *buf = NULL;
     int total_proc, i, is_x, is_y;
 
     MPI_Comm_size(MPI_COMM_WORLD, &total_proc);    
 
-    for ( i = 0; i < total_proc; i++) {
+    for ( i = 1; i < total_proc; i++) {
         is_x = i / proc_slice; 
         is_y = i % proc_slice;
 
@@ -179,6 +185,17 @@ void sendAllSubMatrice(Game *g, int slice_size, int proc_slice) {
         MPI_Send(tmp->board, tmp->rows * tmp->cols, MPI_CHAR, i, 0, MPI_COMM_WORLD);
         freeGame(tmp);
     }    
+
+    /* Get matrix for the process 0 
+     * Add buffer for exchange 
+     * Place the subMatrix in place of matrix with buffer
+     */
+    buf = newGame(slice_size + 1, slice_size + 1);
+    tmp =  __subMatrix(g, 0, 0, slice_size, slice_size);
+    __mergeMatrix(tmp, buf, 0, 0);
+    free(tmp);
+
+    return buf;
 }
 
 Game* receivedMatrix(int my_x, int my_y, int slice_size, int proc_slice) {

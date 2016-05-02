@@ -7,7 +7,7 @@ readonly PROG="./BIN/GameOfLife"
 
 # This array enable to specify the number of processos to use for a specific board size
 # [9]="1,9" means that is the number of row equal 9, then test with 1 processus and then with 9
-NB_PROC_SPEC=( [9]="1, 9" [196]="1,4,196" [256]="4,16,32,64" [289]="144" [400]="100")
+NB_PROC_SPEC=( [9]="1, 9" [196]="1,4,196" [256]="4,16,64" [289]="144" [400]="100")
 
 function diffOutput {
     if [ "$1" != "" ]; then
@@ -83,7 +83,7 @@ for (( i = $START; i <= $END; i++ )); do
         echo -e "END";
 
         echo -n "[TEST] Matrix division : START .. ";
-        mpirun -np $PROC $PROG $DEFAULT_OPT -m > /dev/null
+        mpirun -np $PROC $PROG $DEFAULT_OPT -m > /dev/null 
         DIFF=$(diff output.gol compare.gol 2>&1)
         echo -e "END";
 

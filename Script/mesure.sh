@@ -77,13 +77,9 @@ for (( i = 0; i < ${#GRID_SIZE[@]}; i++)); do
         mpirun -np ${NB_PROC} $PROG $DEFAULT_OPT -t $TOTAL_ITERATION | awk '{printf "%f ", $3}' >> "${FILE}.dat"
         echo -e "END";
 
-        if [ "$SIZE" -gt 400 ] && [ "$NB_PROC" -eq 1 ]; then
-            echo -n "0.000000" >> "${FILE}.dat" 
-        else 
-            echo -ne "\t - Matrix division timer : START .. "
-            mpirun -np ${NB_PROC} $PROG $DEFAULT_OPT -m -t $TOTAL_ITERATION | awk '{printf "%f ", $3}' >> "${FILE}.dat"
-            echo -e "END\n";
-        fi
+        echo -ne "\t - Matrix division timer : START .. "
+        mpirun -np ${NB_PROC} $PROG $DEFAULT_OPT -m -t $TOTAL_ITERATION | awk '{printf "%f ", $3}' >> "${FILE}.dat"
+        echo -e "END\n";
 
         echo "" >> "${FILE}.dat"
     done
