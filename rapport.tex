@@ -50,31 +50,26 @@ Division par lignes Ou par sous-matrices \\
 \end{large}
 \end{center}
 
-
-
 \indent Le problème que j'ai choisi est le même que pour le devoir \#1, à savoir le jeu de la vie.\\
 Tout simplement car j'avais beaucoup apprécié le concept et que je souhaitais tester le même programme mais avec MPI.\\
-
-Il y a donc certaines parties de code source qui sont récupérée de ma version \#1 du projet, cependant une partie de ces fonctions récupérée on au final totalement ou partiellement été réécrite.
+\indent Il y a donc certaines parties de code source qui sont récupérée de ma version \#1 du projet, cependant une partie de ces fonctions récupérée on au final totalement ou partiellement été réécrite.
 
 \section{Description du problème}
 
-Dans le jeu de la vie, l'élément à paralléliser parait assez évidant. \\
+Dans le jeu de la vie, l'élément à paralléliser parait assez évident. \\
 En effet, dans ce jeu le principe est de partir d'une grille de N x M (N $>$ 0 \& M $>$ 0), dans laquelle les cellules peuvent se trouver seulement dans deux états. Une cellule est, soit morte, soit vivante. 
-Le principe du jeu est alors, à partir de cette grille et d'une série de règle très simple, de calculer la grille suivante. 
+Le principe du jeu est alors, à partir de cette grille et d'une série de règles très simple, de calculer la grille suivante. 
 Le jeu de la vie n'a pas de but, il s'agit uniquement de faire évoluer un automate cellulaire au cours du temps.\\
+\indent Les règles se base sur un calcul en fonction du nombre de voisins d'une cellule; ainsi une cellule ayant 3 cellules vivantes à coté d'elle sera vivante à l'étape d'après, une cellule ayant moins de 2 cellules en vie ou plus de 3 en vie à coté d'elle mourra, et enfin une cellule ayant exactement 2 cellules vivantes à côté d'elle restera dans le même état. Ainsi à partir de ces règles il nous faut calculer la grille suivante. \\
 
-Les règles se bases sur un calcule en fonction du nombre de voisin d'une cellule; ainsi une cellule ayant 3 cellules vivante à coté d'elle sera vivante à l'étape d'après, une cellule ayant moins de 2 cellules en vie ou plus de 3 en vie à coté d'elle mourra, et enfin une cellule ayant exactement 2 cellules vivante à côté d'elle restera dans le même état. Ainsi à partir de ces règles il nous faut calculer la grille suivante. \\
+Ainsi en suivant ces règles la grille suivante n'a pas d'interdépendance lors de son calcul (nous n'avons pas besoin de savoir quoi que ce soit de la seconde grille pour la calculer). Ainsi la parallélisation paraît assez évidente. Il suffit de demander à chaque processus de calculer une partie de la grille. \\
 
-Ainsi en suivant ces règles la grille suivante n'a pas d'interdépendance lors de son calcule (nous n'avons pas besoin de savoir quoi que ce soit de la seconde grille pour la calculer). Ainsi la parallélisation parait assez évidente. Il suffit de demander à chaque processus de calculer une partie de la grille. \\
-
-\underline{A noter} : La tâche de base étant assez complexe, j'ai pris le choix de prendre UNIQUEMENT des grilles de N * N dans le cas de la division en sous-matrice. Il faut également que la matrice de N x N soit divisible en P sous matrices de tailles identiques, ou P est le nombre de processus.\\
-Dans le cas de la division en ligne, des matrices de N x M sont prise cependant il faut OBLIGATOIREMENT que la division de M par le nombre de processus P retourne un entier. 
+\underline{A noter} : La tâche de base étant assez complexe, j'ai pris le choix de prendre UNIQUEMENT des grilles de N * N dans le cas de la division en sous-matrice. Il faut également que la matrice de N x N soit divisible en P sous matrices de taille identique, où P est le nombre de processus.\\
+Dans le cas de la division en ligne, des matrices de N x N sont utilisées cependant il faut OBLIGATOIREMENT que la division de M par le nombre de processus P retourne un entier. 
 
 \section{Les approches}
 Comme demandé deux (2) approches ont été fait. \\
-
-La première est la division en blocs de lignes, cette division est fait avec l'aide de la fonction MPI\_Scatter. \\
+\indent La première est la division en blocs de lignes, cette division est fait avec l'aide de la fonction MPI\_Scatter. \\
 Une fois que chaque processus à reçu sa partie de grille à traiter, ils commencent alors à s'échanger entre eux les bordures dont ils vont avoir besoin pour calculer leurs morceaux de grille. \\
 En effet, par exemple le processus 1 à besoin de la partie de matrice supérieur contenu dans le processus 0 mais également de la partie en dessus contenue dans le processus 2. \\
 De même le processus 0 à besoin de la partie basse de la matrice contenu dans le processus 1. \\
@@ -87,33 +82,37 @@ Le principe est le suivant : \\
   \item Le processus 0 lit la matrice d'entrée dans un fichier ou la génère.
   \item Le processus 0 envoi aux autres processus les informations dont ils auront besoin ( par exemple le nombre d'itération, la taille de la grille ...)
   \item Le processus 0 divise la matrice puis envoi chaque partie aux autres processus. La fonction permettant l'envoi retourne également la matrice que le processus 0 devra traiter.
-  \item Les processus s'échangent les bordures dont ils vont avoir besoin pour le calcule. \\
-  Il faut donc envoyer les côtés aux matrices gauches et droites ( si elles existent ) puis les partie hautes et basses aux matrices au dessus et en dessous ( si elles existent ), et enfin les coins aux matrices en diagonales. (encore une fois si elles existent ).
-  \item Une fois tout ces échange fait, chaque processus calcule sa matrice de sortie.
+  \item Les processus s'échangent les bordures dont ils vont avoir besoin pour le calcul. \\
+  Il faut donc envoyer les côtés aux matrices gauches et droites ( si elles existent ) puis les parties hautes et basses aux matrices au dessus et en dessous ( si elles existent ), et enfin les coins aux matrices en diagonale. (encore une fois si elles existent ).
+  \item Une fois tout ces échange fait, chaque processus calcul sa matrice de sortie.
   \item Enfin, chacun des processus renvoi sa matrices modifiée au processus 0.
   \item Si il reste des itérations à faire ont recommence à l'étape 4.
 
 \end{enumerate}
   
-On notera que pour éviter de copier le tp sur la multiplication de matrice je me suis demandé si il était possible d'effectuer le même type d'opération mais sans "spliter" le canal de communication, j'ai donc pris le choix de ne pas utilisé cette fonctionnalité pour tester une nouvelle approche. \\
-En fin de compte, le fait de ne pas avoir "spliter" les canaux de communication fini par crée une trop grande quantité de message qui ont du, je suppose, ralentir l'exécution du programme.
+On notera que pour éviter de copier le tp sur la multiplication de matrice je me suis demandé si il était possible d'effectuer le même type d'opération mais sans "splitter" le canal de communication, j'ai donc pris le choix de ne pas utiliser cette fonctionnalité pour tester une nouvelle approche. \\
+En fin de compte, le fait de ne pas avoir "splitter" les canaux de communication fini par créer une trop grande quantité de message qui a dû, je suppose, ralentir l'exécution du programme.
 
 
 \section{Les tests}
 
 Pour lancer les tests vous pouvez utiliser la commande \framecolorbox[1.7cm]{white}{black!20}{make tests}. D'un autre côté, il est possible de lancer le script avec la commande  \framecolorbox[3.7cm]{white}{black!20}{./Script/test.sh X Y} ou X et Y présentent les bornes de début et de fin pour la taille de la grille. \\
-Par exemple, si X = 196 et Y = 200, seules les grilles ayant une largeur comprises entre 196 et 200 seront fait. \\
+Par exemple, si X = 196 et Y = 200, seules les grilles ayant une largeur comprise entre 196 et 200 seront traitées. \\
 
-Chose particulière de se script est le fait que, de base, les tests sont lancé avec un nombre de processus égal à la taille de la largeur de la grille.\\
+Chose particulière de ce script est le fait que, de base, les tests sont lancés avec un nombre de processus égal à la taille de la largeur de la grille.\\
 Il est ensuite possible de personnaliser le nombre de processus à tester à l'aide de la ligne 10 du fichier ./Script/test.sh. Le tableau NB\_PROC\_SPEC permet alors, pour une largeur de grille donnée, de définir le nombre de processus à tester.\\
 Par exemple, [9]="1,9", signifie que si la largeur de grille est de neuf (9), alors il faudra lancer le programme une fois avec un (1) processus, puis une fois avec neuf (9). \\
-Cette méthode me permet alors de lancer une infinité de taille de grille tout en ayant une personnalisation possible sur les tests à faire afin de montrer que le programme fonctionne bien avec un nombre de processus différent de la largeur de la grille. \\
+Cette méthode me permet alors de lancer une infinité de tailles de grille tout en ayant une personnalisation possible sur les tests à faire afin de montrer que le programme fonctionne bien avec un nombre de processus différent de la largeur de la grille. \\
 
 Le test se déroule de la façon suivante : \\
+\indent - La grille de tests est générée \\
+\indent - Le test séquentiel est lancé, il sert de comparaison pour vérifier la sortie des deux (2) autres versions \\
 \indent - Les itérations des deux (2) versions du programme sont lancées, une première fois avec une division sous forme de blocs de ligne, puis une seconde fois avec la division en sous matrice. \\
-\indent - Les deux (2) sorties sont alors comparée à la suite des Y itérations, si une différence est trouvée celle ci est montrée et une erreur est affichée.\\
+\indent - Les deux (2) sorties sont alors comparées à la version obtenue par le programme séquentiel à la suite des Y itérations, si une différence est trouvée celle-ci est montrée et une erreur est affichée.\\
 
-Il est à noter que, sans modifier la limite du nombre de "pipes" maximum autorisé, à partir d'une certains taille le message suivant est affiché :
+Les tests s'effectuent avec peu de processus ( minimum un (1) ) mais également avec beaucoup de processus, comme par exemple le tests sur la grille de 255 x 255 ou 255 processus sont utilisés.\\
+
+Il est à noter que, sans modifier la limite du nombre de "pipes" maximum autorisé, à partir d'une certaine taille le message suivant est affiché :
 \begin{verbatim}
 ORTE_ERROR_LOG: The system limit on number of pipes a process can open 
 was reached in file odls_default_module.c at line 895
@@ -122,13 +121,14 @@ Pour l'éviter il faut donc augmenter la limite, ou bien préciser des nombres d
 
 \underline{A noter : } A la fin des programmes de tests une chaine de caractère est affichée sous la forme : ".\#...." par exemple, ou "." signifie qu'un test est passé avec succès, "\#" signifiant que le tests à échoué. Ainsi ici le tests deux (2) aurait échoué.
 
+\vspace{-0.2cm}
 \section{Résultats expérimentaux}
 
 Les résultats expérimentaux pour les valeurs suivantes : 64, 192, 320, 512, 1088. \\
-Pour avoir les valeurs exacte, merci de vous reporter au fichier ./Time/size\_'SIZE'.dat, ou 'SIZE' est la taille souhaitée.
+Pour avoir les valeurs exactes, merci de vous reporter au fichier ./Time/size\_'SIZE'.dat, ou 'SIZE' est la taille souhaitée.
 
 Les valeurs utilisées pour les mesures de temps sont différentes de celles des tests.\\
-\underline{Attention} : Les échelles ne sont pas les mêmes dans tout les exemples.
+\underline{Attention} : Les échelles ne sont pas les mêmes dans tous les exemples.
 
 \newpage
 \begin{figure}[!]
@@ -144,8 +144,8 @@ Les valeurs utilisées pour les mesures de temps sont différentes de celles des
   \end{minipage}
 \end{figure}
 
-Première chose que l'on peut remarquer aisément et le fait que la méthode de division par matrice n'est pas viable dans un si petit example, un effet, la quantité de messsage à échanger étant trop important par rapport à la taille du problème cause un grand temps de latence.\\
-Nous pouvons remarqué également que l'accélération de la division par ligne avec uniquement quatre (4) blocs de lignes semble être une bonne idée pour un petit example comme celui ci, en effet l'algorithme de MPI\_Scatter, doit être relativement bien optimisé pour permettre une si bonne accélération.
+Première chose que l'on peut remarquer aisément et le fait que la méthode de division par matrice n'est pas viable dans un si petit example, un effet, la quantité de message à échanger étant trop important par rapport à la taille du problème cause un grand temps de latence.\\
+Nous pouvons remarquer également que l'accélération de la division par ligne avec uniquement quatre (4) blocs de lignes semble être une bonne idée pour un petit exemple comme celui-ci, en effet l'algorithme de MPI\_Scatter, doit être relativement bien optimisé pour permettre une si bonne accélération.
 
 \begin{figure}[h]
   \centering
@@ -159,8 +159,8 @@ Nous pouvons remarqué également que l'accélération de la division par ligne 
     \caption{Accélération absolue pour une grille de 192 x 192}
   \end{minipage}
 \end{figure}
-Dans cette exemple, on peut remarquer que un trop grand nombre de processus par rapport à la taille du problème représente une grande perte de temps, on peut voir ceci avec le test avec 64 processus. \\
-Dans les 2 méthodes, les temps deviennent relativement grand avec ce trop grand nombre de processus qui cause donc un grand nombre d'échange de message inutilement.\\
+Dans cet exemple, on peut remarquer qu'un trop grand nombre de processus par rapport à la taille du problème représente une grande perte de temps, on peut voir ceci avec le test avec 64 processus. \\
+Dans les 2 méthodes, les temps deviennent relativement grands avec ce trop grand nombre de processus qui cause donc un grand nombre d'échanges de messages inutilement.\\
 
 \newpage
 \begin{figure}[h]
@@ -176,8 +176,8 @@ Dans les 2 méthodes, les temps deviennent relativement grand avec ce trop grand
   \end{minipage}
 \end{figure}
 
-Cette exemple est assez intéressant, notamment car l'on peu remarquer que avec cette grandeur de problème la division en sous-matrice arrive à rivaliser avec la version séquentielle. \\
-En effet, avec 4 processus chaque sous-matrice à une taille de 80 x 80, avec que peu d'échange de message, seule 3 échanges sont nécessaire pour calculer chacune des quatre (4) matrice. Ainsi dans ce cas précis, la division en sous-matrice semble adapté, bien que le gains ne soit pas énorme.\\
+Cet exemple est assez intéressant, notamment car l'on peu remarquer que avec cette grandeur de problème la division en sous-matrice arrive à rivaliser avec la version séquentielle. \\
+En effet, avec 4 processus chaque sous-matrice à une taille de 80 x 80, avec que peu d'échange de messages, seuls 3 échanges sont nécessaires pour calculer chacune des quatre (4) matrice. Ainsi dans ce cas précis, la division en sous-matrice semble adaptée, bien que le gain ne soit pas énorme.\\
 
 \begin{figure}[h]
   \centering
@@ -191,8 +191,8 @@ En effet, avec 4 processus chaque sous-matrice à une taille de 80 x 80, avec qu
     \caption{Accélération absolue pour une grille de 512 x 512}
   \end{minipage}
 \end{figure}
-Encore une fois la méthode en utilisant des sous-matrices donne des résultats relativement bien avec 4 processus, cependant la division par ligne nous donne des résultats encore mieux. Surement grâce aux grandes optimisation de la fonction MPI\_Scatter et MPI\_Gather. \\
-Qui plus est, on peut remarquer que la division avec 16 processus est encore meilleure qu'une division en ligne ou en sous-matrice avec 4 processus. Ainsi pour des problèmes de cette ordre de taille une division par blocs de ligne est plus adapté.
+Encore une fois la méthode en utilisant des sous-matrices donne des résultats relativement bien avec 4 processus, cependant la division par ligne nous donne des résultats encore mieux. Surement grâce aux grandes optimisations de la fonction MPI\_Scatter et MPI\_Gather. \\
+Qui plus est, on peut remarquer que la division avec 16 processus est encore meilleure qu'une division en ligne ou en sous-matrice avec 4 processus. Ainsi pour des problèmes de cet ordre de taille une division par blocs de ligne est plus adaptée.
 
 \newpage
 \begin{figure}[h]
@@ -207,22 +207,22 @@ Qui plus est, on peut remarquer que la division avec 16 processus est encore mei
     \caption{Accélération absolue pour une grille de 1088 x 1088}
   \end{minipage}
 \end{figure}
-Enfin, sur ce dernier example, on remarque encore une fois que l'utilisation d'un trop grand nombre de processus n'aide pas à résoudre le problème plus rapidement, des valeurs plus petites tels que quatre (4) processus ou seize (16) sont plus adapté à ce genre de problème. \\
+Enfin, sur ce dernier exemple, on remarque encore une fois que l'utilisation d'un trop grand nombre de processus n'aide pas à résoudre le problème plus rapidement, des valeurs plus petites telles que quatre (4) processus ou seize (16) sont plus adaptés à ce genre de problème. \\
 On remarque encore une fois un écart entre la version avec des sous-matrices et une division en blocs de ligne au niveau de l'accélération absolue.
 
 \section{Conclusion}
-On peut aisement remarquer que la version avec une division par matrice n'est pas forcement une bonne option, cependant celle ci arrive à rivaliser avec la division par ligne quand le nombre de processus n'est pas trop élevé. Pour rappel plus le nombre de processus est élevé plus il y aura de message à faire passer. Certes, ces messages seront de tailles inférieur mais beaucoup plus nombreux.\\
-Le très grand nombre de message à échanger ralenti alors l'exécution du programme et résulte en des performances moins bonnes pour la division en sous-matrice.\\
+On peut aisément remarquer que la version avec une division par matrice n'est pas forcément une bonne option, cependant celle-ci arrive à rivaliser avec la division par ligne quand le nombre de processus n'est pas trop élevé. Pour rappel plus le nombre de processus est élevé plus il y aura de message à faire passer. Certes, ces messages seront de tailles inférieurs mais beaucoup plus nombreux.\\
+Le très grand nombre de messages à échanger ralentit alors l'exécution du programme et résulte en des performances moins bonnes pour la division en sous-matrice.\\
 
-Par exemple, si l'on considère la sous-matrice qui se situerait au milieu de la grille, doit, pour commencer ces calcules obtenir de ces voisins les huit (8) parties qui lui manque, à savoir les côtés gauche et droit, le haut et le bas et enfin chacune des quatre (4) diagonales. La ou la division en blocs de ligne à besoin seulement de deux (2) messages. \\
+Par exemple, si l'on considère la sous-matrice qui se situerait au milieu de la grille, doit, pour commencer ses calculs obtenir de ces voisins les huit (8) parties qui lui manquent, à savoir les côtés gauche et droit, le haut et le bas et enfin chacune des quatre (4) diagonales. Là ou, la division en blocs de ligne à besoin seulement de deux (2) messages. \\
 
-En plus de faire moins d'échange de message, la division par blocs de lignes utilise uniquement les méthodes MPI\_Scatter et MPI\_Gather, ces méthodes sont certainement énormément plus optimisées que les Send et Recv utilisé pour la division en sous-matrice.\\
+En plus de faire moins d'échange de messages, la division par blocs de lignes utilise uniquement les méthodes MPI\_Scatter et MPI\_Gather, ces méthodes sont certainement énormément plus optimisées que les Send et Recv utilisé pour la division en sous-matrice.\\
 
-En somme, le nombre trop grand de message à échanger et la sous-optimisation ou la non optimisation de mes méthodes d'échange de bordures des matrices notamment en essayant de ne pas "spliter" les canaux de communication fait que l'on se retrouve avec une trop grande quantité de messages échangé qui au final ralentissent le programme et le rende sous performant par rapport à la version avec la division en blocs lignes qui elle utilise des méthodes natives optimisée de MPI pour passer aux autres processus les données à traiter. 
+En somme, le nombre trop grand de messages à échanger et la sous-optimisation ou la non-optimisation de mes méthodes d'échange de bordure des matrices notamment en essayant de ne pas "spliter" les canaux de communication fait que l'on se retrouve avec une trop grande quantité de messages échangé qui au final ralentissent le programme et le rende sous performant par rapport à la version avec la division en blocs lignes qui elle utilise des méthodes natives optimisée de MPI pour passer aux autres processus les données à traiter. 
 
 \section{Difficultés}
-Ma grande difficulté à été de bien comprendre quelles parties était à envoyer à chacun des processus voisin notamment sur la division en sous-matrice qui implique une grande quantité de message. Ainsi dû à des erreurs d'envoi de ma part (envoi de la mauvaise zone par exemple) j'ai été fortement ralenti dans ma progression. \\
+Ma grande difficulté a été de bien comprendre quelles parties était à envoyer à chacun des processus voisin notamment sur la division en sous-matrice qui implique une grande quantité de message. Ainsi dû à des erreurs d'envoi de ma part (envoi de la mauvaise zone par exemple) j'ai été fortement ralenti dans ma progression. \\
 
-Qui plus est, n'ayant pas réussi à utiliser des programmes aidant au déboggages ( mon ordinateur n'étant pas assez puissant je suppose), je me suis retrouver à faire le débogging principalement à la main ce qui à été pour moi une autre difficulté, notamment dû au critère assez aléatoire des messages.
+Qui plus est, n'ayant pas réussi à utiliser des programmes aidant au débogages ( mon ordinateur n'étant pas assez puissant je suppose), je me suis retrouvé à faire le débogging principalement à la main ce qui a été pour moi une autre difficulté, notamment dû au critère assez aléatoire des messages.
 
 \end{document}

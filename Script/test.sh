@@ -53,7 +53,7 @@ fi;
 
 if [ ! -z "$1" ]; then
     TO_DO=$( echo "scale=0; sqrt($1)" | bc -l );
-    if [ $TO_DO -le $START ]; then
+    if [ $TO_DO -lt $START ]; then
         echo "$1 need to be > 2";
     else
         START=$TO_DO
