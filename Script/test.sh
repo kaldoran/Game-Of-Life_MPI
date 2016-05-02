@@ -4,10 +4,21 @@ START=2
 END=20
 MAX_ITERATION=30
 readonly PROG="./BIN/GameOfLife"
+readonly PATH_SEQ="../GameOfLife_Seq"
+readonly SEQUENTIAL="$PATH_SEQ/BIN/GameOfLife"
 
 # This array enable to specify the number of processos to use for a specific board size
 # [9]="1,9" means that is the number of row equal 9, then test with 1 processus and then with 9
 NB_PROC_SPEC=( [9]="1, 9" [196]="1,4,196" [256]="4,16,64" [289]="1" [324]="4" [400]="100")
+
+if [ ! -d $PATH_SEQ ]; then
+    read -r -n 1 -p "You allow me to download the sequential version ? [y|N] ";
+    echo ""
+    if [[ $REPLY =~ ^[Yy]$ ]]; then
+        git clone https://github.com/kaldoran/Conway-s_Game-Of-Life $PATH_SEQ
+    fi
+    echo "The version had been download here : $PATH_SEQ";
+fi
 
 function diffOutput {
     if [ "$1" != "" ]; then
@@ -19,6 +30,10 @@ function diffOutput {
         return 0;
     fi
 }
+
+echo -n "[TEST] Lets make sequential version : "
+( cd $PATH_SEQ && make rebuild > /dev/null )
+echo -e "DONE";
 
 
 if ! [ -e $PROG ]; then
@@ -71,22 +86,31 @@ for (( i = $START; i <= $END; i++ )); do
     ./Script/createRandomBoard.sh $SIZE $SIZE true
     echo -e "[TEST] Generation done\n";
 
+    echo -n "[TEST] Lets compute the output of sequential version : "
+    $SEQUENTIAL $DEFAULT_OPT > /dev/null
+    mv output.gol good.gol
+    echo -e "DONE";
 
     for (( j = 0; j < ${#NB_PROC[@]}; j++ )); do
         PROC=${NB_PROC[$j]};
-        echo "[TEST] ${PROC} processus - ${TOTAL_ITERATION} iteration";
+        echo -e "\n[TEST] ${PROC} processus - ${TOTAL_ITERATION} iteration";
 
-        echo -n "[TEST] Row division    : START .. ";
+        echo -n "[TEST] Compute Row division    : START .. ";
         mpirun -np $PROC $PROG $DEFAULT_OPT > /dev/null
-        mv output.gol compare.gol
+        DIFF=$(diff output.gol good.gol 2>&1)
         echo -e "END";
+        
+        echo -n "[TEST] Compare row division output with sequential version       : "
+        diffOutput $DIFF;
+        AllSucces+=$([ $? -eq 0 ] && echo "." || echo "#")
 
-        echo -n "[TEST] Matrix division : START .. ";
+        echo ""
+        echo -n "[TEST] Compute Matrix division : START .. ";
         mpirun -np $PROC $PROG $DEFAULT_OPT -m > /dev/null 
-        DIFF=$(diff output.gol compare.gol 2>&1)
+        DIFF=$(diff output.gol good.gol 2>&1)
         echo -e "END";
 
-        echo -en "\n[TEST] Compare the two (2) version : ";
+        echo -n "[TEST] Compare subMatrix division output with sequential version : ";
         diffOutput $DIFF;
 
         AllSucces+=$([ $? -eq 0 ] && echo "." || echo "#")

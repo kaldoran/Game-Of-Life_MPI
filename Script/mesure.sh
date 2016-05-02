@@ -11,6 +11,7 @@ if [ ! -d $PATH_SEQ ]; then
     if [[ $REPLY =~ ^[Yy]$ ]]; then
         git clone https://github.com/kaldoran/Conway-s_Game-Of-Life $PATH_SEQ
     fi
+    echo "The version had been download here : $PATH_SEQ"
 fi
 
 echo -n "[TEST] Lets make sequential version : "
@@ -53,7 +54,7 @@ TOTAL_PROC=( 1 4 16 64)
 
 for (( i = 0; i < ${#GRID_SIZE[@]}; i++)); do
     TOTAL_ITERATION=$(( $(( $RANDOM % $MAX_ITERATION )) + 1))
-    DEFAULT_OPT="-f ./Script/random.gol";
+    DEFAULT_OPT="-f ./Script/random.gol -t $TOTAL_ITERATION";
 
     SIZE=${GRID_SIZE[$i]}
     echo "[TEST] Start creating a random board [$SIZE x $SIZE]"
@@ -69,16 +70,16 @@ for (( i = 0; i < ${#GRID_SIZE[@]}; i++)); do
 
         echo -n "[TEST] Sequential timer      : START .. ";
         cp ./Script/random.gol "$PATH_SEQ/Script/random.gol"
-        $SEQUENTIAL $DEFAULT_OPT -t $(( $TOTAL_ITERATION + 1 )) | awk '{printf "%f ", $3}' >> "${FILE}.dat"
+        $SEQUENTIAL $DEFAULT_OPT | awk '{printf "%f ", $3}' >> "${FILE}.dat"
         echo -e "END";
 
         echo "[TEST] ${NB_PROC} Processor - $TOTAL_ITERATION Iteration"
         echo -ne "\t - Row division timer    : START .. "
-        mpirun -np ${NB_PROC} $PROG $DEFAULT_OPT -t $TOTAL_ITERATION | awk '{printf "%f ", $3}' >> "${FILE}.dat"
+        mpirun -np ${NB_PROC} $PROG $DEFAULT_OPT | awk '{printf "%f ", $3}' >> "${FILE}.dat"
         echo -e "END";
 
         echo -ne "\t - Matrix division timer : START .. "
-        mpirun -np ${NB_PROC} $PROG $DEFAULT_OPT -m -t $TOTAL_ITERATION | awk '{printf "%f ", $3}' >> "${FILE}.dat"
+        mpirun -np ${NB_PROC} $PROG $DEFAULT_OPT -m | awk '{printf "%f ", $3}' >> "${FILE}.dat"
         echo -e "END\n";
 
         echo "" >> "${FILE}.dat"
